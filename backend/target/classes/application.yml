@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: smart-print-server
+
+# CORS — comma-separated list of allowed origins for REST + WebSocket
+cors:
+  allowed-origins: >
+    http://localhost:3000,
+    http://localhost:5173
+
+simulation:
+  broadcaster:
+    interval-ms: 100          # STATE_UPDATE frequency in milliseconds
+    heartbeat-interval-ms: 30000  # HEARTBEAT when no state change
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.printscheduler: DEBUG
+    org.springframework.web.socket: INFO
+    org.springframework: WARN
