@@ -14,8 +14,15 @@
 /home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/exception/SimulationNotPausedException.java
 /home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/exception/SimulationNotRunningException.java
 /home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/exception/ValidationException.java
+/home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/Database.java
+/home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/JobStatus.java
+/home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/PrintJob.java
+/home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/PrintQueue.java
+/home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/Printer.java
+/home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/PrinterStatus.java
 /home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/SimulationConfig.java
 /home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/SimulationSnapshot.java
+/home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/SimulationState.java
 /home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/model/SimulationStatus.java
 /home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/service/SimulationService.java
 /home/hixam/os-smart-print-server/backend/src/main/java/com/printscheduler/service/SimulationServiceImpl.java
