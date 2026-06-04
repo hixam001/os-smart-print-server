@@ -42,6 +42,12 @@ public class SimulationServiceImpl implements SimulationService {
     private volatile double    simulationSpeed    = 1.0;
     private volatile SimulationConfig activeConfig = null;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private com.printscheduler.websocket.SimulationBroadcaster broadcaster;
+
+    private volatile PrintServerSimulator simulator = null;
+
     // =========================================================================
     //  SimulationService implementation
     // =========================================================================
@@ -61,10 +67,12 @@ public class SimulationServiceImpl implements SimulationService {
             config.getQueueCapacity(), config.getAlgorithm(),
             config.getSimulationSpeed());
 
-        // ── TODO (Core Team): wire your PrintServerSimulator here ──────────
-        // Example:
-        //   simulator.start(config);
-        // ──────────────────────────────────────────────────────────────────
+        this.simulator = new PrintServerSimulator(config, (eventType, details) -> {
+            if (broadcaster != null) {
+                broadcaster.publishEvent(eventType, details);
+            }
+        });
+        this.simulator.start();
     }
 
     @Override
@@ -74,9 +82,9 @@ public class SimulationServiceImpl implements SimulationService {
         }
         log.info("Simulation PAUSED");
 
-        // ── TODO (Core Team) ──────────────────────────────────────────────
-        // simulator.pause();
-        // ─────────────────────────────────────────────────────────────────
+        if (this.simulator != null) {
+            this.simulator.pause();
+        }
     }
 
     @Override
@@ -86,9 +94,9 @@ public class SimulationServiceImpl implements SimulationService {
         }
         log.info("Simulation RESUMED");
 
-        // ── TODO (Core Team) ──────────────────────────────────────────────
-        // simulator.resume();
-        // ─────────────────────────────────────────────────────────────────
+        if (this.simulator != null) {
+            this.simulator.resume();
+        }
     }
 
     @Override
@@ -100,9 +108,9 @@ public class SimulationServiceImpl implements SimulationService {
         }
         log.info("Simulation STOPPED (was {})", prev);
 
-        // ── TODO (Core Team) ──────────────────────────────────────────────
-        // simulator.stop();
-        // ─────────────────────────────────────────────────────────────────
+        if (this.simulator != null) {
+            this.simulator.stop();
+        }
     }
 
     @Override
@@ -114,9 +122,10 @@ public class SimulationServiceImpl implements SimulationService {
         simulationSpeed  = 1.0;
         log.info("Simulation RESET");
 
-        // ── TODO (Core Team) ──────────────────────────────────────────────
-        // simulator.reset();
-        // ─────────────────────────────────────────────────────────────────
+        if (this.simulator != null) {
+            this.simulator.reset();
+            this.simulator = null;
+        }
     }
 
     @Override
@@ -124,16 +133,16 @@ public class SimulationServiceImpl implements SimulationService {
         if (request.getAlgorithm() != null) {
             currentScheduler = request.getAlgorithm();
             log.info("Scheduler changed to {}", currentScheduler);
-            // simulator.setScheduler(currentScheduler);
         }
         if (request.getJobIntervalMs() != null) {
             log.info("Job interval changed to {} ms", request.getJobIntervalMs());
-            // simulator.setJobInterval(request.getJobIntervalMs());
         }
         if (request.getSimulationSpeed() != null) {
             simulationSpeed = request.getSimulationSpeed();
             log.info("Simulation speed changed to {}x", simulationSpeed);
-            // simulator.setSimulationSpeed(simulationSpeed);
+        }
+        if (this.simulator != null) {
+            this.simulator.configure(request);
         }
     }
 
@@ -142,10 +151,13 @@ public class SimulationServiceImpl implements SimulationService {
         long elapsed = startTimeMs.get() == 0 ? 0
             : System.currentTimeMillis() - startTimeMs.get();
 
-        // ── TODO (Core Team): replace `details` with your SimulationState ──
-        // Object details = simulator.getSimulationState();
-        Object details = null;
-        // ──────────────────────────────────────────────────────────────────
+        com.printscheduler.model.SimulationState details = null;
+        if (this.simulator != null) {
+            details = this.simulator.getSimulationState();
+            elapsed = details.getElapsedMs();
+            currentScheduler = details.getAlgorithm();
+            simulationSpeed = details.getSimulationSpeed();
+        }
 
         return new SimulationSnapshot(
             status.get(),
@@ -162,4 +174,9 @@ public class SimulationServiceImpl implements SimulationService {
 
     @Override
     public boolean isPaused()  { return status.get() == SimulationStatus.PAUSED; }
+
+    @Override
+    public String exportJobsCsv() {
+        return this.simulator != null ? this.simulator.getDatabase().toCsv() : "";
+    }
 }
