@@ -73,4 +73,9 @@ public interface SimulationService {
 
     /** @return {@code true} if the simulation is paused */
     boolean isPaused();
+
+    /**
+     * Exports the completed job history from the simulator database as a CSV string.
+     */
+    String exportJobsCsv();
 }
