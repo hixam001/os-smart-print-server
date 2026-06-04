@@ -209,10 +209,7 @@ public class SimulationController {
         }
 
         if ("csv".equals(format)) {
-            // ── TODO (Core Team): stream your completed jobs list here ─────
-            String csv = "jobId,userId,pageCount,waitingTime,turnaroundTime\n";
-            // for (PrintJob j : metricsCollector.getCompletedJobs()) { ... }
-            // ─────────────────────────────────────────────────────────────
+            String csv = simulationService.exportJobsCsv();
 
             HttpHeaders headers = new HttpHeaders();
             headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
