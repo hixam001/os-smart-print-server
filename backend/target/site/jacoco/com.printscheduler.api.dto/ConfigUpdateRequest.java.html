@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigUpdateRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.api.dto</a> &gt; <span class="el_source">ConfigUpdateRequest.java</span></div><h1>ConfigUpdateRequest.java</h1><pre class="source lang-java linenums">package com.printscheduler.api.dto;
+
+import jakarta.validation.constraints.*;
+
+/**
+ * Request body for {@code PUT /api/simulation/configure}.
+ * All fields are optional — only non-null values are applied.
+ */
+<span class="nc" id="L9">public class ConfigUpdateRequest {</span>
+
+    @Pattern(regexp = &quot;FCFS|SJF|HYBRID&quot;,
+             message = &quot;algorithm must be one of: FCFS, SJF, HYBRID&quot;)
+    private String algorithm;
+
+    @Min(value = 100, message = &quot;jobIntervalMs must be between 100 and 10000&quot;)
+    @Max(value = 10000, message = &quot;jobIntervalMs must be between 100 and 10000&quot;)
+    private Long jobIntervalMs;
+
+    @DecimalMin(value = &quot;0.1&quot;, message = &quot;simulationSpeed must be between 0.1 and 10.0&quot;)
+    @DecimalMax(value = &quot;10.0&quot;, message = &quot;simulationSpeed must be between 0.1 and 10.0&quot;)
+    private Double simulationSpeed;
+
+    // ── Getters / Setters ─────────────────────────────────────────────────
+<span class="nc" id="L24">    public String  getAlgorithm()            { return algorithm; }</span>
+<span class="nc" id="L25">    public void    setAlgorithm(String v)    { this.algorithm = v; }</span>
+
+<span class="nc" id="L27">    public Long    getJobIntervalMs()        { return jobIntervalMs; }</span>
+<span class="nc" id="L28">    public void    setJobIntervalMs(Long v)  { this.jobIntervalMs = v; }</span>
+
+<span class="nc" id="L30">    public Double  getSimulationSpeed()      { return simulationSpeed; }</span>
+<span class="nc" id="L31">    public void    setSimulationSpeed(Double v) { this.simulationSpeed = v; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

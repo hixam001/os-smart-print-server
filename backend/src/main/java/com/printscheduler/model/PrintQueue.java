@@ -40,8 +40,19 @@ public class PrintQueue {
     /** Default aging threshold for HYBRID mode (30 simulation-seconds). */
     public static final long DEFAULT_AGING_THRESHOLD_MS = 30_000L;
 
-    /** Milliseconds of estimated print time per monochrome page. */
-    public static final long MS_PER_PAGE = 1_000L;
+    /**
+     * Milliseconds of estimated print time per monochrome page.
+     * 3 000 ms ≈ 20 pages/min — realistic for a mid-range laser printer.
+     * Colour jobs get a 1.5× multiplier applied in {@link PrintJob#estimatedDurationMs}.
+     */
+    public static final long MS_PER_PAGE = 3_000L;
+
+    /**
+     * One-time job computation delay before printing starts.
+     * Simulates the printer receiving the job, processing fonts/graphics,
+     * and warming up the fuser — typically 2–5 s on a real device.
+     */
+    public static final long MS_COMPUTE_DELAY = 2_500L;
 
     // ── Configuration ─────────────────────────────────────────────────────
     private final int    capacity;

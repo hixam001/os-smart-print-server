@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.printscheduler.model.PrintQueueTest
 -------------------------------------------------------------------------------
-Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.198 s -- in com.printscheduler.model.PrintQueueTest
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.077 s -- in com.printscheduler.model.PrintQueueTest

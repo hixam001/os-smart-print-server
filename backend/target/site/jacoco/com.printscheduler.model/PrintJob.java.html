@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PrintJob.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.model</a> &gt; <span class="el_source">PrintJob.java</span></div><h1>PrintJob.java</h1><pre class="source lang-java linenums">package com.printscheduler.model;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Represents a single print request submitted by a user.
+ *
+ * &lt;h3&gt;Immutable identity fields (set at construction)&lt;/h3&gt;
+ * &lt;ul&gt;
+ *   &lt;li&gt;{@code jobId}    – unique monotonically increasing ID&lt;/li&gt;
+ *   &lt;li&gt;{@code userId}   – ID of the submitting user (1-based)&lt;/li&gt;
+ *   &lt;li&gt;{@code pageCount}– number of pages to print&lt;/li&gt;
+ *   &lt;li&gt;{@code isColor}  – colour vs. monochrome job&lt;/li&gt;
+ *   &lt;li&gt;{@code priority} – higher value = higher scheduling priority&lt;/li&gt;
+ *   &lt;li&gt;{@code submittedAt} – simulation-time tick when the job was queued&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * &lt;h3&gt;Mutable lifecycle fields&lt;/h3&gt;
+ * &lt;ul&gt;
+ *   &lt;li&gt;{@code status}      – current {@link JobStatus}&lt;/li&gt;
+ *   &lt;li&gt;{@code assignedPrinterId} – which printer is processing this job&lt;/li&gt;
+ *   &lt;li&gt;{@code startedAt}   – tick when printing began&lt;/li&gt;
+ *   &lt;li&gt;{@code completedAt} – tick when printing ended (or job failed/cancelled)&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * &lt;h3&gt;Thread-safety&lt;/h3&gt;
+ * Mutable fields are written only by the single scheduler/printer thread.
+ * The {@code volatile} qualifier on {@code status} ensures that reading threads
+ * (e.g. the WebSocket broadcaster) always see the latest value.
+ */
+public class PrintJob {
+
+    // ── ID generator ─────────────────────────────────────────────────────
+<span class="nc" id="L34">    private static final AtomicLong ID_SEQUENCE = new AtomicLong(0);</span>
+
+    /** Resets the global ID counter. Call this during simulation reset. */
+    public static void resetIdSequence() {
+<span class="nc" id="L38">        ID_SEQUENCE.set(0);</span>
+<span class="nc" id="L39">    }</span>
+
+    // ── Identity (immutable after construction) ───────────────────────────
+    private final long   jobId;
+    private final int    userId;
+    private final int    pageCount;
+    private final boolean isColor;
+    private final int    priority;      // higher = more urgent
+    private final long   submittedAt;   // simulation tick (ms)
+
+    // ── Lifecycle (mutable) ───────────────────────────────────────────────
+<span class="nc" id="L50">    private volatile JobStatus status        = JobStatus.QUEUED;</span>
+<span class="nc" id="L51">    private volatile int       assignedPrinterId = -1;  // -1 = unassigned</span>
+<span class="nc" id="L52">    private volatile long      startedAt     = -1;</span>
+<span class="nc" id="L53">    private volatile long      completedAt   = -1;</span>
+
+    // ── Constructor ───────────────────────────────────────────────────────
+
+    /**
+     * Creates a new print job and assigns it the next global job ID.
+     *
+     * @param userId      1-based user ID of the submitter
+     * @param pageCount   number of pages (≥ 1)
+     * @param isColor     {@code true} for colour printing
+     * @param priority    scheduling priority (higher = sooner)
+     * @param submittedAt simulation-time milliseconds when the job was queued
+     */
+    public PrintJob(int userId, int pageCount, boolean isColor,
+<span class="nc" id="L67">                    int priority, long submittedAt) {</span>
+<span class="nc" id="L68">        this.jobId       = ID_SEQUENCE.incrementAndGet();</span>
+<span class="nc" id="L69">        this.userId      = userId;</span>
+<span class="nc" id="L70">        this.pageCount   = pageCount;</span>
+<span class="nc" id="L71">        this.isColor     = isColor;</span>
+<span class="nc" id="L72">        this.priority    = priority;</span>
+<span class="nc" id="L73">        this.submittedAt = submittedAt;</span>
+<span class="nc" id="L74">    }</span>
+
+    // ── Computed metrics ──────────────────────────────────────────────────
+
+    /**
+     * Waiting time = time from submission until printing starts.
+     *
+     * @return waiting time in ms, or -1 if printing has not started yet
+     */
+    public long getWaitingTimeMs() {
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        return startedAt &lt; 0 ? -1 : startedAt - submittedAt;</span>
+    }
+
+    /**
+     * Turnaround time = time from submission until completion/failure/cancellation.
+     *
+     * @return turnaround time in ms, or -1 if the job is not yet finished
+     */
+    public long getTurnaroundTimeMs() {
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        return completedAt &lt; 0 ? -1 : completedAt - submittedAt;</span>
+    }
+
+    /**
+     * Estimated print duration based on page count and colour mode.
+     * Used by the SJF scheduler as the &quot;burst time&quot; estimate.
+     * Colour pages take ~2× as long as monochrome pages.
+     *
+     * @param msPerPage milliseconds per page for monochrome
+     * @return estimated duration in ms
+     */
+    public long estimatedDurationMs(long msPerPage) {
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        return pageCount * msPerPage * (isColor ? 2 : 1);</span>
+    }
+
+    // ── Lifecycle helpers ─────────────────────────────────────────────────
+
+    /** Marks this job as currently being printed by the given printer. */
+    public void markPrinting(int printerId, long nowMs) {
+<span class="nc" id="L112">        this.assignedPrinterId = printerId;</span>
+<span class="nc" id="L113">        this.startedAt         = nowMs;</span>
+<span class="nc" id="L114">        this.status            = JobStatus.PRINTING;</span>
+<span class="nc" id="L115">    }</span>
+
+    /** Marks this job as successfully completed. */
+    public void markCompleted(long nowMs) {
+<span class="nc" id="L119">        this.completedAt = nowMs;</span>
+<span class="nc" id="L120">        this.status      = JobStatus.COMPLETED;</span>
+<span class="nc" id="L121">    }</span>
+
+    /** Marks this job as failed. */
+    public void markFailed(long nowMs) {
+<span class="nc" id="L125">        this.completedAt = nowMs;</span>
+<span class="nc" id="L126">        this.status      = JobStatus.FAILED;</span>
+<span class="nc" id="L127">    }</span>
+
+    /** Removes this job from the queue (before printing began). */
+    public void markCancelled(long nowMs) {
+<span class="nc" id="L131">        this.completedAt = nowMs;</span>
+<span class="nc" id="L132">        this.status      = JobStatus.CANCELLED;</span>
+<span class="nc" id="L133">    }</span>
+
+    // ── Getters ───────────────────────────────────────────────────────────
+
+<span class="nc" id="L137">    public long      getJobId()             { return jobId; }</span>
+<span class="nc" id="L138">    public int       getUserId()            { return userId; }</span>
+<span class="nc" id="L139">    public int       getPageCount()         { return pageCount; }</span>
+<span class="nc" id="L140">    public boolean   isColor()              { return isColor; }</span>
+<span class="nc" id="L141">    public int       getPriority()          { return priority; }</span>
+<span class="nc" id="L142">    public long      getSubmittedAt()       { return submittedAt; }</span>
+<span class="nc" id="L143">    public JobStatus getStatus()            { return status; }</span>
+<span class="nc" id="L144">    public int       getAssignedPrinterId() { return assignedPrinterId; }</span>
+<span class="nc" id="L145">    public long      getStartedAt()         { return startedAt; }</span>
+<span class="nc" id="L146">    public long      getCompletedAt()       { return completedAt; }</span>
+
+    // ── Status setters (for direct manipulation in tests / reset) ─────────
+<span class="nc" id="L149">    public void setStatus(JobStatus status)            { this.status = status; }</span>
+<span class="nc" id="L150">    public void setAssignedPrinterId(int printerId)    { this.assignedPrinterId = printerId; }</span>
+<span class="nc" id="L151">    public void setStartedAt(long startedAt)           { this.startedAt = startedAt; }</span>
+<span class="nc" id="L152">    public void setCompletedAt(long completedAt)       { this.completedAt = completedAt; }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L156">        return String.format(&quot;PrintJob{id=%d, user=%d, pages=%d, color=%b, priority=%d, status=%s}&quot;,</span>
+<span class="nc" id="L157">            jobId, userId, pageCount, isColor, priority, status);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

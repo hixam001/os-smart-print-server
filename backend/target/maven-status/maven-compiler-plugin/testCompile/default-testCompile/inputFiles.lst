@@ -1,6 +1,10 @@
 /home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/api/SimulationControllerIntegrationTest.java
+/home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/integration/SimulationLifecycleIT.java
+/home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/model/CountingSemaphoreTest.java
 /home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/model/DatabaseTest.java
 /home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/model/PrintJobTest.java
 /home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/model/PrintQueueTest.java
 /home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/model/PrinterTest.java
 /home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/model/SimulationStateTest.java
+/home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/scheduler/SchedulerThreadTest.java
+/home/hixam/os-smart-print-server/backend/src/test/java/com/printscheduler/simulator/PrintServerSimulatorTest.java

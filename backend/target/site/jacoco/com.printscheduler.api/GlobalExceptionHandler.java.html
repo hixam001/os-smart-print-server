@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.api</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package com.printscheduler.api;
+
+import com.printscheduler.api.dto.ApiResponse;
+import com.printscheduler.api.dto.ErrorDetail;
+import com.printscheduler.exception.InvalidConfigurationException;
+import com.printscheduler.exception.SimulationAlreadyRunningException;
+import com.printscheduler.exception.SimulationException;
+import com.printscheduler.exception.SimulationNotPausedException;
+import com.printscheduler.exception.SimulationNotRunningException;
+import com.printscheduler.exception.ValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Centralized exception handler — every unhandled exception is caught here,
+ * formatted as a structured {@link ApiResponse}, and logged properly.
+ *
+ * &lt;p&gt;Stack traces are NEVER exposed in the response body.
+ */
+@RestControllerAdvice
+<span class="nc" id="L31">public class GlobalExceptionHandler {</span>
+
+<span class="nc" id="L33">    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);</span>
+
+    // ── 409 Conflict: illegal state transitions ───────────────────────────
+
+    @ExceptionHandler(SimulationAlreadyRunningException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; handleAlreadyRunning(
+            SimulationAlreadyRunningException ex) {
+<span class="nc" id="L40">        log.warn(&quot;409 – {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L41">        return conflict(&quot;SIMULATION_ALREADY_RUNNING&quot;, ex.getMessage());</span>
+    }
+
+    @ExceptionHandler(SimulationNotRunningException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; handleNotRunning(
+            SimulationNotRunningException ex) {
+<span class="nc" id="L47">        log.warn(&quot;409 – {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L48">        return conflict(&quot;SIMULATION_NOT_RUNNING&quot;, ex.getMessage());</span>
+    }
+
+    @ExceptionHandler(SimulationNotPausedException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; handleNotPaused(
+            SimulationNotPausedException ex) {
+<span class="nc" id="L54">        log.warn(&quot;409 – {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L55">        return conflict(&quot;SIMULATION_NOT_PAUSED&quot;, ex.getMessage());</span>
+    }
+
+    // ── 400 Bad Request: validation failures ─────────────────────────────
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; handleValidation(
+            MethodArgumentNotValidException ex) {
+<span class="nc" id="L63">        Map&lt;String, Object&gt; fieldErrors = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">        for (FieldError fe : ex.getBindingResult().getFieldErrors()) {</span>
+<span class="nc" id="L65">            fieldErrors.put(fe.getField(), fe.getDefaultMessage());</span>
+<span class="nc" id="L66">        }</span>
+<span class="nc" id="L67">        log.warn(&quot;400 – validation failed: {}&quot;, fieldErrors);</span>
+<span class="nc" id="L68">        return badRequest(&quot;VALIDATION_FAILED&quot;, &quot;Request validation failed&quot;, fieldErrors);</span>
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; handleCustomValidation(
+            ValidationException ex) {
+<span class="nc" id="L74">        Map&lt;String, Object&gt; fieldErrors = new HashMap&lt;&gt;(ex.getFieldErrors());</span>
+<span class="nc" id="L75">        log.warn(&quot;400 – {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L76">        return badRequest(&quot;VALIDATION_FAILED&quot;, ex.getMessage(), fieldErrors);</span>
+    }
+
+    @ExceptionHandler(InvalidConfigurationException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; handleInvalidConfig(
+            InvalidConfigurationException ex) {
+<span class="nc" id="L82">        log.warn(&quot;400 – {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L83">        return badRequest(&quot;INVALID_CONFIGURATION&quot;, ex.getMessage(), Map.of());</span>
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; handleUnreadable(
+            HttpMessageNotReadableException ex) {
+<span class="nc" id="L89">        log.warn(&quot;400 – malformed request body: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L90">        return badRequest(&quot;MALFORMED_REQUEST&quot;, &quot;Request body is missing or malformed&quot;, Map.of());</span>
+    }
+
+    // ── Catch-all: any remaining SimulationException ──────────────────────
+
+    @ExceptionHandler(SimulationException.class)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; handleSimulation(SimulationException ex) {
+<span class="nc" id="L97">        log.error(&quot;500 – unhandled SimulationException: {}&quot;, ex.getMessage(), ex);</span>
+<span class="nc" id="L98">        return internalError(&quot;SIMULATION_ERROR&quot;, ex.getMessage());</span>
+    }
+
+    // ── 500 Internal Server Error ─────────────────────────────────────────
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; handleGeneric(Exception ex) {
+<span class="nc" id="L105">        log.error(&quot;500 – unexpected error&quot;, ex);</span>
+<span class="nc" id="L106">        return internalError(&quot;INTERNAL_ERROR&quot;, &quot;An unexpected error occurred&quot;);</span>
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; conflict(String code, String message) {
+<span class="nc" id="L112">        return ResponseEntity</span>
+<span class="nc" id="L113">            .status(HttpStatus.CONFLICT)</span>
+<span class="nc" id="L114">            .body(ApiResponse.error(new ErrorDetail(code, message)));</span>
+    }
+
+    private ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; badRequest(
+            String code, String message, Map&lt;String, Object&gt; details) {
+<span class="nc" id="L119">        return ResponseEntity</span>
+<span class="nc" id="L120">            .status(HttpStatus.BAD_REQUEST)</span>
+<span class="nc" id="L121">            .body(ApiResponse.error(new ErrorDetail(code, message, details)));</span>
+    }
+
+    private ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; internalError(String code, String message) {
+<span class="nc" id="L125">        return ResponseEntity</span>
+<span class="nc" id="L126">            .status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L127">            .body(ApiResponse.error(new ErrorDetail(code, message)));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

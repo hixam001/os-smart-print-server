@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SimulationClock.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.model</a> &gt; <span class="el_source">SimulationClock.java</span></div><h1>SimulationClock.java</h1><pre class="source lang-java linenums">package com.printscheduler.model;
+
+import java.util.function.BooleanSupplier;
+
+/**
+ * Tracks the logical simulated time, accounting for simulation speed (multiplier) and pauses.
+ */
+<span class="nc" id="L8">public class SimulationClock {</span>
+<span class="nc" id="L9">    private long simulatedTimeMs = 0;</span>
+<span class="nc" id="L10">    private long lastRealTimeMs = 0;</span>
+<span class="nc" id="L11">    private double speed = 1.0;</span>
+<span class="nc" id="L12">    private boolean running = false;</span>
+
+    /**
+     * Starts the clock tracking.
+     */
+    public synchronized void start(double initialSpeed) {
+<span class="nc" id="L18">        this.speed = initialSpeed;</span>
+<span class="nc" id="L19">        this.lastRealTimeMs = System.currentTimeMillis();</span>
+<span class="nc" id="L20">        this.running = true;</span>
+<span class="nc" id="L21">    }</span>
+
+    /**
+     * Pauses the clock tracking.
+     */
+    public synchronized void pause() {
+<span class="nc" id="L27">        update();</span>
+<span class="nc" id="L28">        this.running = false;</span>
+<span class="nc" id="L29">    }</span>
+
+    /**
+     * Resumes the clock tracking.
+     */
+    public synchronized void resume() {
+<span class="nc" id="L35">        this.lastRealTimeMs = System.currentTimeMillis();</span>
+<span class="nc" id="L36">        this.running = true;</span>
+<span class="nc" id="L37">    }</span>
+
+    /**
+     * Stops the clock tracking.
+     */
+    public synchronized void stop() {
+<span class="nc" id="L43">        update();</span>
+<span class="nc" id="L44">        this.running = false;</span>
+<span class="nc" id="L45">    }</span>
+
+    /**
+     * Updates the simulation speed.
+     */
+    public synchronized void setSpeed(double newSpeed) {
+<span class="nc" id="L51">        update();</span>
+<span class="nc" id="L52">        this.speed = newSpeed;</span>
+<span class="nc" id="L53">    }</span>
+
+    /**
+     * Returns the simulated time elapsed in milliseconds.
+     */
+    public synchronized long getSimulatedTimeMs() {
+<span class="nc" id="L59">        update();</span>
+<span class="nc" id="L60">        return simulatedTimeMs;</span>
+    }
+
+    /**
+     * Resets the clock to zero.
+     */
+    public synchronized void reset() {
+<span class="nc" id="L67">        simulatedTimeMs = 0;</span>
+<span class="nc" id="L68">        lastRealTimeMs = 0;</span>
+<span class="nc" id="L69">        running = false;</span>
+<span class="nc" id="L70">        speed = 1.0;</span>
+<span class="nc" id="L71">    }</span>
+
+    /**
+     * Updates the internal simulated time based on elapsed real-world time.
+     */
+    private void update() {
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (running) {</span>
+<span class="nc" id="L78">            long now = System.currentTimeMillis();</span>
+<span class="nc" id="L79">            long deltaReal = now - lastRealTimeMs;</span>
+<span class="nc" id="L80">            simulatedTimeMs += (long) (deltaReal * speed);</span>
+<span class="nc" id="L81">            lastRealTimeMs = now;</span>
+        }
+<span class="nc" id="L83">    }</span>
+
+    /**
+     * Sleeps the calling thread for a specified amount of simulated time.
+     * Respects simulation pauses and checks if the simulation is still running.
+     *
+     * @param simulatedMs       how many simulated milliseconds to sleep
+     * @param isRunningSupplier boolean supplier returning false if simulation stopped
+     * @param pauseCoordinator  coordinator to block on if paused
+     */
+    public void sleepSimulated(long simulatedMs, BooleanSupplier isRunningSupplier, PauseCoordinator pauseCoordinator)
+            throws InterruptedException {
+<span class="nc" id="L95">        long startSimTime = getSimulatedTimeMs();</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        while (getSimulatedTimeMs() - startSimTime &lt; simulatedMs) {</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">            if (!isRunningSupplier.getAsBoolean()) {</span>
+<span class="nc" id="L98">                throw new InterruptedException(&quot;Simulation stopped&quot;);</span>
+            }
+<span class="nc" id="L100">            pauseCoordinator.checkPause();</span>
+            // Sleep for a small real-world interval (20ms) to check flags responsively
+<span class="nc" id="L102">            Thread.sleep(20);</span>
+        }
+<span class="nc" id="L104">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

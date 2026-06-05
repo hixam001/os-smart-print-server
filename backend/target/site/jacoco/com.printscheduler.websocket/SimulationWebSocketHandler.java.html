@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SimulationWebSocketHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.websocket</a> &gt; <span class="el_source">SimulationWebSocketHandler.java</span></div><h1>SimulationWebSocketHandler.java</h1><pre class="source lang-java linenums">package com.printscheduler.websocket;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+/**
+ * Manages all active WebSocket connections to {@code /ws/simulation}.
+ *
+ * &lt;p&gt;On connect: assigns a client ID and sends a CONNECTED acknowledgement.&lt;br&gt;
+ * On disconnect: removes the session from the active list.&lt;br&gt;
+ * On error: logs and removes the offending session.
+ *
+ * &lt;p&gt;{@link SimulationBroadcaster} calls {@link #broadcast(String)} every 100 ms.
+ */
+@Component
+public class SimulationWebSocketHandler extends TextWebSocketHandler {
+
+<span class="nc" id="L30">    private static final Logger log = LoggerFactory.getLogger(SimulationWebSocketHandler.class);</span>
+
+    /** Thread-safe list of currently active client sessions. */
+<span class="nc" id="L33">    private final List&lt;WebSocketSession&gt; sessions = new CopyOnWriteArrayList&lt;&gt;();</span>
+
+    private final ObjectMapper objectMapper;
+
+<span class="nc" id="L37">    public SimulationWebSocketHandler(ObjectMapper objectMapper) {</span>
+<span class="nc" id="L38">        this.objectMapper = objectMapper;</span>
+<span class="nc" id="L39">    }</span>
+
+    // ── Connection lifecycle ──────────────────────────────────────────────
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+<span class="nc" id="L45">        sessions.add(session);</span>
+<span class="nc" id="L46">        String clientId = UUID.randomUUID().toString();</span>
+<span class="nc" id="L47">        session.getAttributes().put(&quot;clientId&quot;, clientId);</span>
+
+<span class="nc" id="L49">        String ack = objectMapper.writeValueAsString(Map.of(</span>
+            &quot;type&quot;,      &quot;CONNECTED&quot;,
+<span class="nc" id="L51">            &quot;timestamp&quot;, System.currentTimeMillis(),</span>
+            &quot;clientId&quot;,  clientId,
+            &quot;message&quot;,   &quot;Connected to simulation broker&quot;
+        ));
+<span class="nc" id="L55">        session.sendMessage(new TextMessage(ack));</span>
+<span class="nc" id="L56">        log.info(&quot;WebSocket client connected: {} (total: {})&quot;, clientId, sessions.size());</span>
+<span class="nc" id="L57">    }</span>
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+<span class="nc" id="L61">        sessions.remove(session);</span>
+<span class="nc" id="L62">        log.info(&quot;WebSocket client disconnected (total: {}) — {}&quot;, sessions.size(), status);</span>
+<span class="nc" id="L63">    }</span>
+
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) {
+<span class="nc" id="L67">        sessions.remove(session);</span>
+<span class="nc" id="L68">        log.warn(&quot;WebSocket transport error — session removed: {}&quot;, exception.getMessage());</span>
+<span class="nc" id="L69">    }</span>
+
+    // ── Broadcasting ──────────────────────────────────────────────────────
+
+    /**
+     * Sends a JSON message to every connected client.
+     * Dead sessions are detected and removed automatically.
+     *
+     * @param json fully serialised JSON string to send
+     */
+    public void broadcast(String json) {
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (sessions.isEmpty()) return;</span>
+
+<span class="nc" id="L82">        TextMessage message = new TextMessage(json);</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        for (WebSocketSession session : sessions) {</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            if (!session.isOpen()) {</span>
+<span class="nc" id="L85">                sessions.remove(session);</span>
+<span class="nc" id="L86">                continue;</span>
+            }
+            try {
+<span class="nc" id="L89">                synchronized (session) {          // TextMessage sends must be serialised per-session</span>
+<span class="nc" id="L90">                    session.sendMessage(message);</span>
+<span class="nc" id="L91">                }</span>
+<span class="nc" id="L92">            } catch (IOException ex) {</span>
+<span class="nc" id="L93">                log.warn(&quot;Failed to send to client — removing session: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L94">                sessions.remove(session);</span>
+<span class="nc" id="L95">            }</span>
+<span class="nc" id="L96">        }</span>
+<span class="nc" id="L97">    }</span>
+
+    /** @return number of currently connected clients */
+<span class="nc" id="L100">    public int getConnectionCount() { return sessions.size(); }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

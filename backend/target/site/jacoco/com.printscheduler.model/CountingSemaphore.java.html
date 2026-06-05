@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CountingSemaphore.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.model</a> &gt; <span class="el_source">CountingSemaphore.java</span></div><h1>CountingSemaphore.java</h1><pre class="source lang-java linenums">package com.printscheduler.model;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Custom Counting Semaphore with waiter tracking and event callbacks.
+ *
+ * &lt;p&gt;Demonstrates the OS Producer-Consumer synchronization primitive:
+ * &lt;ul&gt;
+ *   &lt;li&gt;{@code release()} — producer signals &quot;one more item available&quot;&lt;/li&gt;
+ *   &lt;li&gt;{@code acquire()} — consumer blocks if no items, then takes one&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * &lt;p&gt;The optional {@link SemaphoreEventListener} lets the simulator
+ * broadcast SEMAPHORE_WAIT / SEMAPHORE_ACQUIRED / SEMAPHORE_RELEASED events
+ * to the WebSocket layer for live UI visualization.
+ */
+public class CountingSemaphore {
+
+    /** Called on key semaphore transitions for live event broadcasting. */
+    public interface SemaphoreEventListener {
+        void onEvent(String eventType, String threadName, int permits, int waiters);
+    }
+
+    private int permits;
+<span class="nc" id="L26">    private final AtomicInteger waiters = new AtomicInteger(0);</span>
+    private volatile SemaphoreEventListener eventListener;
+
+<span class="nc" id="L29">    public CountingSemaphore(int initialPermits) {</span>
+<span class="nc bnc" id="L30" title="All 2 branches missed.">        if (initialPermits &lt; 0)</span>
+<span class="nc" id="L31">            throw new IllegalArgumentException(&quot;Semaphore permits cannot be negative&quot;);</span>
+<span class="nc" id="L32">        this.permits = initialPermits;</span>
+<span class="nc" id="L33">    }</span>
+
+    public void setEventListener(SemaphoreEventListener listener) {
+<span class="nc" id="L36">        this.eventListener = listener;</span>
+<span class="nc" id="L37">    }</span>
+
+    // ── acquire ───────────────────────────────────────────────────────────
+
+    /**
+     * Acquires a permit, blocking if none are available.
+     * Fires SEMAPHORE_WAIT → SEMAPHORE_ACQUIRED events for visualization.
+     */
+    public synchronized void acquire() throws InterruptedException {
+<span class="nc" id="L46">        String thread = Thread.currentThread().getName();</span>
+
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        if (permits &lt;= 0) {</span>
+            // About to block — notify UI
+<span class="nc" id="L50">            waiters.incrementAndGet();</span>
+<span class="nc" id="L51">            fireEvent(&quot;SEMAPHORE_WAIT&quot;, thread);</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">            while (permits &lt;= 0) {</span>
+<span class="nc" id="L53">                wait();   // release monitor, block until notify()</span>
+            }
+<span class="nc" id="L55">            waiters.decrementAndGet();</span>
+        }
+
+<span class="nc" id="L58">        permits--;</span>
+<span class="nc" id="L59">        fireEvent(&quot;SEMAPHORE_ACQUIRED&quot;, thread);</span>
+<span class="nc" id="L60">    }</span>
+
+    // ── release ───────────────────────────────────────────────────────────
+
+    /**
+     * Releases a permit, waking exactly one waiting thread.
+     * Fires SEMAPHORE_RELEASED event.
+     */
+    public synchronized void release() {
+<span class="nc" id="L69">        String thread = Thread.currentThread().getName();</span>
+<span class="nc" id="L70">        permits++;</span>
+<span class="nc" id="L71">        notify();          // wake one waiting PrinterThread</span>
+<span class="nc" id="L72">        fireEvent(&quot;SEMAPHORE_RELEASED&quot;, thread);</span>
+<span class="nc" id="L73">    }</span>
+
+    // ── queries ───────────────────────────────────────────────────────────
+
+    /** Current available permits (jobs in queue). */
+<span class="nc" id="L78">    public synchronized int getPermits() { return permits; }</span>
+
+    /** Number of printer threads currently blocked on acquire(). */
+<span class="nc" id="L81">    public int getWaiters() { return waiters.get(); }</span>
+
+    // ── private ───────────────────────────────────────────────────────────
+
+    private void fireEvent(String type, String thread) {
+<span class="nc" id="L86">        SemaphoreEventListener l = this.eventListener;</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        if (l != null) {</span>
+            try {
+<span class="nc" id="L89">                l.onEvent(type, thread, permits, waiters.get());</span>
+<span class="nc" id="L90">            } catch (Exception ignored) {}</span>
+        }
+<span class="nc" id="L92">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

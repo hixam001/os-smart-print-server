@@ -50,6 +50,10 @@ public class SimulationState {
     // ── Aggregated metrics ────────────────────────────────────────────────
     private Metrics metrics = new Metrics();
 
+    // ── Semaphore deep-dive (for UI visualization) ────────────────────────
+    private int semaphorePermits = 0;   // current available permits
+    private int semaphoreWaiters = 0;   // printer threads blocked on acquire()
+
     // ── Constructors ──────────────────────────────────────────────────────
     public SimulationState() {}
 
@@ -245,6 +249,8 @@ public class SimulationState {
     public List<PrinterInfo> getPrinters()       { return Collections.unmodifiableList(printers); }
     public List<JobInfo>     getQueuedJobs()     { return Collections.unmodifiableList(queuedJobs); }
     public Metrics           getMetrics()        { return metrics; }
+    public int               getSemaphorePermits() { return semaphorePermits; }
+    public int               getSemaphoreWaiters() { return semaphoreWaiters; }
 
     // ── Top-level setters ─────────────────────────────────────────────────
 
@@ -261,4 +267,6 @@ public class SimulationState {
     public void setPrinters(List<PrinterInfo> v)  { this.printers = v; }
     public void setQueuedJobs(List<JobInfo> v)    { this.queuedJobs = v; }
     public void setMetrics(Metrics v)             { this.metrics = v; }
+    public void setSemaphorePermits(int v)         { this.semaphorePermits = v; }
+    public void setSemaphoreWaiters(int v)         { this.semaphoreWaiters = v; }
 }

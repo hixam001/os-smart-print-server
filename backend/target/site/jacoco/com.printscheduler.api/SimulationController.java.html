@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SimulationController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.api</a> &gt; <span class="el_source">SimulationController.java</span></div><h1>SimulationController.java</h1><pre class="source lang-java linenums">package com.printscheduler.api;
+
+import com.printscheduler.api.dto.ApiResponse;
+import com.printscheduler.api.dto.ConfigUpdateRequest;
+import com.printscheduler.model.SimulationConfig;
+import com.printscheduler.model.SimulationSnapshot;
+import com.printscheduler.service.SimulationService;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+/**
+ * REST controller exposing all simulation lifecycle endpoints.
+ *
+ * &lt;p&gt;Base path: {@code /api/simulation}
+ *
+ * &lt;table border=&quot;1&quot; cellpadding=&quot;4&quot;&gt;
+ *   &lt;tr&gt;&lt;th&gt;Method&lt;/th&gt;&lt;th&gt;Path&lt;/th&gt;&lt;th&gt;Action&lt;/th&gt;&lt;/tr&gt;
+ *   &lt;tr&gt;&lt;td&gt;POST&lt;/td&gt;&lt;td&gt;/start&lt;/td&gt;&lt;td&gt;Start simulation with config&lt;/td&gt;&lt;/tr&gt;
+ *   &lt;tr&gt;&lt;td&gt;POST&lt;/td&gt;&lt;td&gt;/pause&lt;/td&gt;&lt;td&gt;Pause running simulation&lt;/td&gt;&lt;/tr&gt;
+ *   &lt;tr&gt;&lt;td&gt;POST&lt;/td&gt;&lt;td&gt;/resume&lt;/td&gt;&lt;td&gt;Resume paused simulation&lt;/td&gt;&lt;/tr&gt;
+ *   &lt;tr&gt;&lt;td&gt;POST&lt;/td&gt;&lt;td&gt;/stop&lt;/td&gt;&lt;td&gt;Stop simulation (preserves metrics)&lt;/td&gt;&lt;/tr&gt;
+ *   &lt;tr&gt;&lt;td&gt;POST&lt;/td&gt;&lt;td&gt;/reset&lt;/td&gt;&lt;td&gt;Stop + clear all state&lt;/td&gt;&lt;/tr&gt;
+ *   &lt;tr&gt;&lt;td&gt;PUT&lt;/td&gt;&lt;td&gt;/configure&lt;/td&gt;&lt;td&gt;Change algo / speed at runtime&lt;/td&gt;&lt;/tr&gt;
+ *   &lt;tr&gt;&lt;td&gt;GET&lt;/td&gt;&lt;td&gt;/state&lt;/td&gt;&lt;td&gt;Current simulation snapshot&lt;/td&gt;&lt;/tr&gt;
+ *   &lt;tr&gt;&lt;td&gt;GET&lt;/td&gt;&lt;td&gt;/metrics&lt;/td&gt;&lt;td&gt;Performance metrics (delegates to core)&lt;/td&gt;&lt;/tr&gt;
+ *   &lt;tr&gt;&lt;td&gt;GET&lt;/td&gt;&lt;td&gt;/export&lt;/td&gt;&lt;td&gt;Export job data as CSV or JSON&lt;/td&gt;&lt;/tr&gt;
+ * &lt;/table&gt;
+ */
+@RestController
+@RequestMapping(&quot;/api/simulation&quot;)
+public class SimulationController {
+
+<span class="nc" id="L40">    private static final Logger log = LoggerFactory.getLogger(SimulationController.class);</span>
+
+    private final SimulationService simulationService;
+
+<span class="nc" id="L44">    public SimulationController(SimulationService simulationService) {</span>
+<span class="nc" id="L45">        this.simulationService = simulationService;</span>
+<span class="nc" id="L46">    }</span>
+
+    // ── 1. Start ─────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/simulation/start
+     *
+     * &lt;p&gt;Starts a new simulation. Returns 202 Accepted on success.
+     */
+    @PostMapping(&quot;/start&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; start(
+            @Valid @RequestBody SimulationConfig config) {
+
+<span class="nc" id="L59">        log.info(&quot;POST /start — algo={} users={} printers={} capacity={}&quot;,</span>
+<span class="nc" id="L60">            config.getAlgorithm(), config.getNumUsers(),</span>
+<span class="nc" id="L61">            config.getNumPrinters(), config.getQueueCapacity());</span>
+
+<span class="nc" id="L63">        simulationService.start(config);</span>
+
+<span class="nc" id="L65">        Map&lt;String, Object&gt; data = Map.of(</span>
+            &quot;status&quot;,    &quot;RUNNING&quot;,
+<span class="nc" id="L67">            &quot;algorithm&quot;, config.getAlgorithm(),</span>
+<span class="nc" id="L68">            &quot;startedAt&quot;, System.currentTimeMillis()</span>
+        );
+<span class="nc" id="L70">        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(data));</span>
+    }
+
+    // ── 2. Pause ─────────────────────────────────────────────────────────
+
+    /** POST /api/simulation/pause */
+    @PostMapping(&quot;/pause&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; pause() {
+<span class="nc" id="L78">        log.info(&quot;POST /pause&quot;);</span>
+<span class="nc" id="L79">        simulationService.pause();</span>
+
+<span class="nc" id="L81">        Map&lt;String, Object&gt; data = Map.of(</span>
+            &quot;status&quot;,   &quot;PAUSED&quot;,
+<span class="nc" id="L83">            &quot;pausedAt&quot;, System.currentTimeMillis()</span>
+        );
+<span class="nc" id="L85">        return ResponseEntity.ok(ApiResponse.ok(data));</span>
+    }
+
+    // ── 3. Resume ────────────────────────────────────────────────────────
+
+    /** POST /api/simulation/resume */
+    @PostMapping(&quot;/resume&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; resume() {
+<span class="nc" id="L93">        log.info(&quot;POST /resume&quot;);</span>
+<span class="nc" id="L94">        simulationService.resume();</span>
+
+<span class="nc" id="L96">        Map&lt;String, Object&gt; data = Map.of(</span>
+            &quot;status&quot;,    &quot;RUNNING&quot;,
+<span class="nc" id="L98">            &quot;resumedAt&quot;, System.currentTimeMillis()</span>
+        );
+<span class="nc" id="L100">        return ResponseEntity.ok(ApiResponse.ok(data));</span>
+    }
+
+    // ── 4. Stop ──────────────────────────────────────────────────────────
+
+    /** POST /api/simulation/stop */
+    @PostMapping(&quot;/stop&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; stop() {
+<span class="nc" id="L108">        log.info(&quot;POST /stop&quot;);</span>
+<span class="nc" id="L109">        simulationService.stop();</span>
+
+<span class="nc" id="L111">        Map&lt;String, Object&gt; data = Map.of(</span>
+            &quot;status&quot;,   &quot;STOPPED&quot;,
+<span class="nc" id="L113">            &quot;stoppedAt&quot;, System.currentTimeMillis()</span>
+        );
+<span class="nc" id="L115">        return ResponseEntity.ok(ApiResponse.ok(data));</span>
+    }
+
+    // ── 5. Reset ─────────────────────────────────────────────────────────
+
+    /** POST /api/simulation/reset — always succeeds (idempotent) */
+    @PostMapping(&quot;/reset&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; reset() {
+<span class="nc" id="L123">        log.info(&quot;POST /reset&quot;);</span>
+<span class="nc" id="L124">        simulationService.reset();</span>
+
+<span class="nc" id="L126">        Map&lt;String, Object&gt; data = Map.of(</span>
+            &quot;status&quot;,  &quot;STOPPED&quot;,
+<span class="nc" id="L128">            &quot;resetAt&quot;, System.currentTimeMillis()</span>
+        );
+<span class="nc" id="L130">        return ResponseEntity.ok(ApiResponse.ok(data));</span>
+    }
+
+    // ── 6. Configure ─────────────────────────────────────────────────────
+
+    /** PUT /api/simulation/configure — change algorithm / speed at runtime */
+    @PutMapping(&quot;/configure&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; configure(
+            @Valid @RequestBody ConfigUpdateRequest request) {
+
+<span class="nc" id="L140">        log.info(&quot;PUT /configure — {}&quot;, request);</span>
+<span class="nc" id="L141">        simulationService.configure(request);</span>
+
+<span class="nc" id="L143">        Map&lt;String, Object&gt; applied = new java.util.LinkedHashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        if (request.getAlgorithm()       != null) applied.put(&quot;algorithm&quot;,      request.getAlgorithm());</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (request.getJobIntervalMs()   != null) applied.put(&quot;jobIntervalMs&quot;,   request.getJobIntervalMs());</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">        if (request.getSimulationSpeed() != null) applied.put(&quot;simulationSpeed&quot;, request.getSimulationSpeed());</span>
+
+<span class="nc" id="L148">        return ResponseEntity.ok(ApiResponse.ok(Map.of(&quot;appliedChanges&quot;, applied)));</span>
+    }
+
+    // ── 7. State ─────────────────────────────────────────────────────────
+
+    /** GET /api/simulation/state — returns full current state snapshot */
+    @GetMapping(&quot;/state&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;SimulationSnapshot&gt;&gt; getState() {
+<span class="nc" id="L156">        SimulationSnapshot snapshot = simulationService.getState();</span>
+<span class="nc" id="L157">        return ResponseEntity.ok(ApiResponse.ok(snapshot));</span>
+    }
+
+    // ── 8. Metrics ───────────────────────────────────────────────────────
+
+    /**
+     * GET /api/simulation/metrics
+     *
+     * &lt;p&gt;Delegates to the service for aggregated performance metrics.
+     * The core team should override {@code getState().getDetails()} or
+     * expose a dedicated metrics method on the service.
+     *
+     * @param groupBy   &quot;none&quot; | &quot;printer&quot; | &quot;scheduler&quot;
+     * @param timeRange &quot;all&quot; | &quot;last-hour&quot; | &quot;last-minute&quot;
+     */
+    @GetMapping(&quot;/metrics&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; getMetrics(
+            @RequestParam(defaultValue = &quot;none&quot;)  String groupBy,
+            @RequestParam(defaultValue = &quot;all&quot;)   String timeRange) {
+
+<span class="nc" id="L177">        SimulationSnapshot snapshot = simulationService.getState();</span>
+        // The core team sets snapshot.details to their metrics object
+<span class="nc" id="L179">        Object metrics = snapshot.getDetails();</span>
+<span class="nc" id="L180">        return ResponseEntity.ok(ApiResponse.ok(</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">            metrics != null ? metrics : Map.of(&quot;message&quot;, &quot;No metrics available yet&quot;)));</span>
+    }
+
+    // ── 9. Export ────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/simulation/export?format=csv&amp;type=jobs
+     *
+     * &lt;p&gt;Core team: inject your job list here.
+     * Currently returns a placeholder response.
+     *
+     * @param format &quot;csv&quot; or &quot;json&quot;
+     * @param type   &quot;jobs&quot; or &quot;metrics&quot;
+     */
+    @GetMapping(&quot;/export&quot;)
+    public ResponseEntity&lt;?&gt; exportData(
+            @RequestParam String format,
+            @RequestParam String type) {
+
+<span class="nc bnc" id="L200" title="All 4 branches missed.">        if (!format.equals(&quot;csv&quot;) &amp;&amp; !format.equals(&quot;json&quot;)) {</span>
+<span class="nc" id="L201">            return ResponseEntity.badRequest().body(</span>
+<span class="nc" id="L202">                ApiResponse.error(new com.printscheduler.api.dto.ErrorDetail(</span>
+                    &quot;INVALID_FORMAT&quot;, &quot;format must be 'csv' or 'json'&quot;)));
+        }
+<span class="nc bnc" id="L205" title="All 4 branches missed.">        if (!type.equals(&quot;jobs&quot;) &amp;&amp; !type.equals(&quot;metrics&quot;)) {</span>
+<span class="nc" id="L206">            return ResponseEntity.badRequest().body(</span>
+<span class="nc" id="L207">                ApiResponse.error(new com.printscheduler.api.dto.ErrorDetail(</span>
+                    &quot;INVALID_TYPE&quot;, &quot;type must be 'jobs' or 'metrics'&quot;)));
+        }
+
+<span class="nc bnc" id="L211" title="All 2 branches missed.">        if (&quot;csv&quot;.equals(format)) {</span>
+<span class="nc" id="L212">            String csv = simulationService.exportJobsCsv();</span>
+
+<span class="nc" id="L214">            HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L215">            headers.set(HttpHeaders.CONTENT_TYPE, &quot;text/csv&quot;);</span>
+<span class="nc" id="L216">            headers.set(HttpHeaders.CONTENT_DISPOSITION,</span>
+                &quot;attachment; filename=\&quot;&quot; + type + &quot;.csv\&quot;&quot;);
+<span class="nc" id="L218">            return ResponseEntity.ok().headers(headers).body(csv);</span>
+        }
+
+        // JSON export
+<span class="nc" id="L222">        Map&lt;String, Object&gt; data = Map.of(</span>
+            &quot;type&quot;,          type,
+<span class="nc" id="L224">            &quot;exportedAt&quot;,    System.currentTimeMillis(),</span>
+<span class="nc" id="L225">            &quot;totalRecords&quot;,  0,</span>
+<span class="nc" id="L226">            &quot;records&quot;,       java.util.List.of()</span>
+        );
+<span class="nc" id="L228">        return ResponseEntity.ok(ApiResponse.ok(data));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

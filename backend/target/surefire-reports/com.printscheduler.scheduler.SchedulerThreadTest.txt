@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.printscheduler.scheduler.SchedulerThreadTest
+-------------------------------------------------------------------------------
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.007 s -- in com.printscheduler.scheduler.SchedulerThreadTest

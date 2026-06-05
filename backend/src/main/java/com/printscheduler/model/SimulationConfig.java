@@ -22,7 +22,7 @@ public class SimulationConfig {
 
     @Min(value = 100, message = "jobIntervalMs must be between 100 and 10000")
     @Max(value = 10000, message = "jobIntervalMs must be between 100 and 10000")
-    private long jobIntervalMs = 3000;
+    private long jobIntervalMs = 5000;   // users submit a job every ~5s
 
     @Pattern(regexp = "FCFS|SJF|HYBRID",
              message = "algorithm must be one of: FCFS, SJF, HYBRID")
@@ -38,7 +38,7 @@ public class SimulationConfig {
 
     @DecimalMin(value = "0.1", message = "simulationSpeed must be between 0.1 and 10.0")
     @DecimalMax(value = "10.0", message = "simulationSpeed must be between 0.1 and 10.0")
-    private double simulationSpeed = 1.0;
+    private double simulationSpeed = 2.0; // 2× makes print delays watchable
 
     // ── Constructors ──────────────────────────────────────────────────────
     public SimulationConfig() {}

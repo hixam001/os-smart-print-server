@@ -43,6 +43,15 @@ public class PrintServerSimulator {
         for (int i = 1; i <= config.getNumPrinters(); i++) {
             printers.add(new Printer(i));
         }
+
+        // Wire semaphore event listener — broadcasts acquire/release/wait events
+        this.jobsAvailable.setEventListener((type, thread, permits, waiters) ->
+            publishEvent(type, java.util.Map.of(
+                "thread",  thread,
+                "permits", permits,
+                "waiters", waiters
+            ))
+        );
     }
 
     /**
@@ -227,6 +236,10 @@ public class PrintServerSimulator {
 
         // Recompute simulation-wide metrics
         state.setMetrics(database.buildMetrics(now));
+
+        // Expose semaphore state for the UI semaphore deep-dive panel
+        state.setSemaphorePermits(jobsAvailable.getPermits());
+        state.setSemaphoreWaiters(jobsAvailable.getWaiters());
 
         return state;
     }

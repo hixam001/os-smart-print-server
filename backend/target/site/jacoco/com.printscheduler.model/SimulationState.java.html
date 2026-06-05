@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SimulationState.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.model</a> &gt; <span class="el_source">SimulationState.java</span></div><h1>SimulationState.java</h1><pre class="source lang-java linenums">package com.printscheduler.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * A point-in-time snapshot of the entire simulation.
+ *
+ * &lt;p&gt;This class is what the {@code SimulationServiceImpl} returns from
+ * {@code getState()} and what the WebSocket broadcaster serialises
+ * into JSON every 100 ms.  It contains everything the frontend needs
+ * to render the live dashboard:
+ *
+ * &lt;ul&gt;
+ *   &lt;li&gt;Overall status + elapsed time&lt;/li&gt;
+ *   &lt;li&gt;Active scheduling algorithm and simulation speed&lt;/li&gt;
+ *   &lt;li&gt;Queue depth and per-algorithm admission metrics&lt;/li&gt;
+ *   &lt;li&gt;Per-printer state (status, current job, completions)&lt;/li&gt;
+ *   &lt;li&gt;All QUEUED jobs currently waiting&lt;/li&gt;
+ *   &lt;li&gt;Aggregated simulation-wide metrics&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * &lt;p&gt;All fields are plain POJOs so Jackson can serialise without any
+ * additional annotations.  No live mutable state is exposed—callers
+ * should build a new instance on each tick.
+ */
+public class SimulationState {
+
+    // ── Top-level simulation context ──────────────────────────────────────
+    private SimulationStatus status;
+    private long             elapsedMs;
+    private String           algorithm;
+    private double           simulationSpeed;
+    private int              tick;              // simulation tick counter
+
+    // ── Queue summary ──────────────────────────────────────────────────────
+    private int  queueSize;
+    private int  queueCapacity;
+    private long totalEnqueued;
+    private long totalDequeued;
+    private long totalRejected;   // jobs turned away (queue full)
+
+    // ── Per-printer snapshots ─────────────────────────────────────────────
+<span class="nc" id="L45">    private List&lt;PrinterInfo&gt; printers = new ArrayList&lt;&gt;();</span>
+
+    // ── Queued job list (for the live queue panel) ─────────────────────────
+<span class="nc" id="L48">    private List&lt;JobInfo&gt; queuedJobs = new ArrayList&lt;&gt;();</span>
+
+    // ── Aggregated metrics ────────────────────────────────────────────────
+<span class="nc" id="L51">    private Metrics metrics = new Metrics();</span>
+
+    // ── Semaphore deep-dive (for UI visualization) ────────────────────────
+<span class="nc" id="L54">    private int semaphorePermits = 0;   // current available permits</span>
+<span class="nc" id="L55">    private int semaphoreWaiters = 0;   // printer threads blocked on acquire()</span>
+
+    // ── Constructors ──────────────────────────────────────────────────────
+<span class="nc" id="L58">    public SimulationState() {}</span>
+
+    // =========================================================================
+    //  Nested: PrinterInfo
+    // =========================================================================
+
+    /**
+     * Lightweight projection of a {@link Printer} for JSON serialisation.
+     * Avoids exposing the mutable Printer domain object directly.
+     */
+    public static class PrinterInfo {
+        private int    printerId;
+        private String name;
+        private String status;              // PrinterStatus name
+        private Long   currentJobId;        // null if idle
+        private int    currentJobPages;     // 0 if idle
+        private long   jobProgressPercent;  // 0–100
+        private int    jobsCompleted;
+        private long   totalPages;
+        private double averagePrintTimeMs;
+
+<span class="nc" id="L79">        public PrinterInfo() {}</span>
+
+        /**
+         * Builds a {@code PrinterInfo} from a live {@link Printer} and
+         * the current simulation time.
+         */
+        public static PrinterInfo from(Printer printer, long nowMs) {
+<span class="nc" id="L86">            PrinterInfo pi = new PrinterInfo();</span>
+<span class="nc" id="L87">            pi.printerId         = printer.getPrinterId();</span>
+<span class="nc" id="L88">            pi.name              = printer.getName();</span>
+<span class="nc" id="L89">            pi.status            = printer.getStatus().name();</span>
+<span class="nc" id="L90">            pi.jobsCompleted     = printer.getJobsCompleted();</span>
+<span class="nc" id="L91">            pi.totalPages        = printer.getTotalPages();</span>
+<span class="nc" id="L92">            pi.averagePrintTimeMs = printer.averagePrintTimeMs();</span>
+
+<span class="nc" id="L94">            PrintJob cur = printer.getCurrentJob();</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">            if (cur != null) {</span>
+<span class="nc" id="L96">                pi.currentJobId    = cur.getJobId();</span>
+<span class="nc" id="L97">                pi.currentJobPages = cur.getPageCount();</span>
+
+<span class="nc" id="L99">                long start    = printer.getJobStartTime();</span>
+<span class="nc" id="L100">                long finish   = printer.getJobFinishTime();</span>
+<span class="nc" id="L101">                long total    = finish - start;</span>
+<span class="nc" id="L102">                long elapsed  = nowMs - start;</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">                pi.jobProgressPercent = total &gt; 0</span>
+<span class="nc" id="L104">                    ? Math.min(100, elapsed * 100 / total)</span>
+<span class="nc" id="L105">                    : 0;</span>
+<span class="nc" id="L106">            } else {</span>
+<span class="nc" id="L107">                pi.currentJobId       = null;</span>
+<span class="nc" id="L108">                pi.currentJobPages    = 0;</span>
+<span class="nc" id="L109">                pi.jobProgressPercent = 0;</span>
+            }
+<span class="nc" id="L111">            return pi;</span>
+        }
+
+        // Getters
+<span class="nc" id="L115">        public int    getPrinterId()          { return printerId; }</span>
+<span class="nc" id="L116">        public String getName()               { return name; }</span>
+<span class="nc" id="L117">        public String getStatus()             { return status; }</span>
+<span class="nc" id="L118">        public Long   getCurrentJobId()       { return currentJobId; }</span>
+<span class="nc" id="L119">        public int    getCurrentJobPages()    { return currentJobPages; }</span>
+<span class="nc" id="L120">        public long   getJobProgressPercent() { return jobProgressPercent; }</span>
+<span class="nc" id="L121">        public int    getJobsCompleted()      { return jobsCompleted; }</span>
+<span class="nc" id="L122">        public long   getTotalPages()         { return totalPages; }</span>
+<span class="nc" id="L123">        public double getAveragePrintTimeMs() { return averagePrintTimeMs; }</span>
+
+        // Setters (for Jackson / tests)
+<span class="nc" id="L126">        public void setPrinterId(int v)          { this.printerId = v; }</span>
+<span class="nc" id="L127">        public void setName(String v)             { this.name = v; }</span>
+<span class="nc" id="L128">        public void setStatus(String v)           { this.status = v; }</span>
+<span class="nc" id="L129">        public void setCurrentJobId(Long v)       { this.currentJobId = v; }</span>
+<span class="nc" id="L130">        public void setCurrentJobPages(int v)     { this.currentJobPages = v; }</span>
+<span class="nc" id="L131">        public void setJobProgressPercent(long v) { this.jobProgressPercent = v; }</span>
+<span class="nc" id="L132">        public void setJobsCompleted(int v)       { this.jobsCompleted = v; }</span>
+<span class="nc" id="L133">        public void setTotalPages(long v)         { this.totalPages = v; }</span>
+<span class="nc" id="L134">        public void setAveragePrintTimeMs(double v){ this.averagePrintTimeMs = v; }</span>
+    }
+
+    // =========================================================================
+    //  Nested: JobInfo
+    // =========================================================================
+
+    /**
+     * Lightweight projection of a {@link PrintJob} for JSON serialisation.
+     */
+    public static class JobInfo {
+        private long   jobId;
+        private int    userId;
+        private int    pageCount;
+        private boolean color;
+        private int    priority;
+        private String status;
+        private long   submittedAt;
+        private long   waitingTimeMs;   // -1 if still queued
+        private long   turnaroundTimeMs; // -1 if not completed
+
+<span class="nc" id="L155">        public JobInfo() {}</span>
+
+        /** Builds a {@code JobInfo} from a live {@link PrintJob}. */
+        public static JobInfo from(PrintJob job) {
+<span class="nc" id="L159">            JobInfo ji = new JobInfo();</span>
+<span class="nc" id="L160">            ji.jobId          = job.getJobId();</span>
+<span class="nc" id="L161">            ji.userId         = job.getUserId();</span>
+<span class="nc" id="L162">            ji.pageCount      = job.getPageCount();</span>
+<span class="nc" id="L163">            ji.color          = job.isColor();</span>
+<span class="nc" id="L164">            ji.priority       = job.getPriority();</span>
+<span class="nc" id="L165">            ji.status         = job.getStatus().name();</span>
+<span class="nc" id="L166">            ji.submittedAt    = job.getSubmittedAt();</span>
+<span class="nc" id="L167">            ji.waitingTimeMs  = job.getWaitingTimeMs();</span>
+<span class="nc" id="L168">            ji.turnaroundTimeMs = job.getTurnaroundTimeMs();</span>
+<span class="nc" id="L169">            return ji;</span>
+        }
+
+        // Getters
+<span class="nc" id="L173">        public long   getJobId()           { return jobId; }</span>
+<span class="nc" id="L174">        public int    getUserId()          { return userId; }</span>
+<span class="nc" id="L175">        public int    getPageCount()       { return pageCount; }</span>
+<span class="nc" id="L176">        public boolean isColor()           { return color; }</span>
+<span class="nc" id="L177">        public int    getPriority()        { return priority; }</span>
+<span class="nc" id="L178">        public String getStatus()          { return status; }</span>
+<span class="nc" id="L179">        public long   getSubmittedAt()     { return submittedAt; }</span>
+<span class="nc" id="L180">        public long   getWaitingTimeMs()   { return waitingTimeMs; }</span>
+<span class="nc" id="L181">        public long   getTurnaroundTimeMs(){ return turnaroundTimeMs; }</span>
+
+        // Setters (for Jackson / tests)
+<span class="nc" id="L184">        public void setJobId(long v)            { this.jobId = v; }</span>
+<span class="nc" id="L185">        public void setUserId(int v)            { this.userId = v; }</span>
+<span class="nc" id="L186">        public void setPageCount(int v)         { this.pageCount = v; }</span>
+<span class="nc" id="L187">        public void setColor(boolean v)         { this.color = v; }</span>
+<span class="nc" id="L188">        public void setPriority(int v)          { this.priority = v; }</span>
+<span class="nc" id="L189">        public void setStatus(String v)         { this.status = v; }</span>
+<span class="nc" id="L190">        public void setSubmittedAt(long v)      { this.submittedAt = v; }</span>
+<span class="nc" id="L191">        public void setWaitingTimeMs(long v)    { this.waitingTimeMs = v; }</span>
+<span class="nc" id="L192">        public void setTurnaroundTimeMs(long v) { this.turnaroundTimeMs = v; }</span>
+    }
+
+    // =========================================================================
+    //  Nested: Metrics
+    // =========================================================================
+
+    /**
+     * Aggregated performance metrics for the simulation run so far.
+     *
+     * &lt;p&gt;All values are computed from the {@link Database} at snapshot time.
+     */
+    public static class Metrics {
+        private int    totalJobsCompleted;
+        private int    totalJobsFailed;
+        private int    totalJobsCancelled;
+        private double avgWaitingTimeMs;
+        private double avgTurnaroundTimeMs;
+        private double avgPageCount;
+        private long   throughputJobsPerMin;  // jobs completed per simulated minute
+        private double colorJobRatio;         // fraction of completed jobs that were colour
+
+<span class="nc" id="L214">        public Metrics() {}</span>
+
+        // Getters
+<span class="nc" id="L217">        public int    getTotalJobsCompleted()   { return totalJobsCompleted; }</span>
+<span class="nc" id="L218">        public int    getTotalJobsFailed()      { return totalJobsFailed; }</span>
+<span class="nc" id="L219">        public int    getTotalJobsCancelled()   { return totalJobsCancelled; }</span>
+<span class="nc" id="L220">        public double getAvgWaitingTimeMs()     { return avgWaitingTimeMs; }</span>
+<span class="nc" id="L221">        public double getAvgTurnaroundTimeMs()  { return avgTurnaroundTimeMs; }</span>
+<span class="nc" id="L222">        public double getAvgPageCount()         { return avgPageCount; }</span>
+<span class="nc" id="L223">        public long   getThroughputJobsPerMin() { return throughputJobsPerMin; }</span>
+<span class="nc" id="L224">        public double getColorJobRatio()        { return colorJobRatio; }</span>
+
+        // Setters
+<span class="nc" id="L227">        public void setTotalJobsCompleted(int v)    { this.totalJobsCompleted = v; }</span>
+<span class="nc" id="L228">        public void setTotalJobsFailed(int v)       { this.totalJobsFailed = v; }</span>
+<span class="nc" id="L229">        public void setTotalJobsCancelled(int v)    { this.totalJobsCancelled = v; }</span>
+<span class="nc" id="L230">        public void setAvgWaitingTimeMs(double v)   { this.avgWaitingTimeMs = v; }</span>
+<span class="nc" id="L231">        public void setAvgTurnaroundTimeMs(double v){ this.avgTurnaroundTimeMs = v; }</span>
+<span class="nc" id="L232">        public void setAvgPageCount(double v)       { this.avgPageCount = v; }</span>
+<span class="nc" id="L233">        public void setThroughputJobsPerMin(long v) { this.throughputJobsPerMin = v; }</span>
+<span class="nc" id="L234">        public void setColorJobRatio(double v)      { this.colorJobRatio = v; }</span>
+    }
+
+    // ── Top-level getters ─────────────────────────────────────────────────
+
+<span class="nc" id="L239">    public SimulationStatus getStatus()          { return status; }</span>
+<span class="nc" id="L240">    public long             getElapsedMs()        { return elapsedMs; }</span>
+<span class="nc" id="L241">    public String           getAlgorithm()        { return algorithm; }</span>
+<span class="nc" id="L242">    public double           getSimulationSpeed()  { return simulationSpeed; }</span>
+<span class="nc" id="L243">    public int              getTick()             { return tick; }</span>
+<span class="nc" id="L244">    public int              getQueueSize()        { return queueSize; }</span>
+<span class="nc" id="L245">    public int              getQueueCapacity()    { return queueCapacity; }</span>
+<span class="nc" id="L246">    public long             getTotalEnqueued()    { return totalEnqueued; }</span>
+<span class="nc" id="L247">    public long             getTotalDequeued()    { return totalDequeued; }</span>
+<span class="nc" id="L248">    public long             getTotalRejected()    { return totalRejected; }</span>
+<span class="nc" id="L249">    public List&lt;PrinterInfo&gt; getPrinters()       { return Collections.unmodifiableList(printers); }</span>
+<span class="nc" id="L250">    public List&lt;JobInfo&gt;     getQueuedJobs()     { return Collections.unmodifiableList(queuedJobs); }</span>
+<span class="nc" id="L251">    public Metrics           getMetrics()        { return metrics; }</span>
+<span class="nc" id="L252">    public int               getSemaphorePermits() { return semaphorePermits; }</span>
+<span class="nc" id="L253">    public int               getSemaphoreWaiters() { return semaphoreWaiters; }</span>
+
+    // ── Top-level setters ─────────────────────────────────────────────────
+
+<span class="nc" id="L257">    public void setStatus(SimulationStatus v)     { this.status = v; }</span>
+<span class="nc" id="L258">    public void setElapsedMs(long v)              { this.elapsedMs = v; }</span>
+<span class="nc" id="L259">    public void setAlgorithm(String v)            { this.algorithm = v; }</span>
+<span class="nc" id="L260">    public void setSimulationSpeed(double v)      { this.simulationSpeed = v; }</span>
+<span class="nc" id="L261">    public void setTick(int v)                    { this.tick = v; }</span>
+<span class="nc" id="L262">    public void setQueueSize(int v)               { this.queueSize = v; }</span>
+<span class="nc" id="L263">    public void setQueueCapacity(int v)           { this.queueCapacity = v; }</span>
+<span class="nc" id="L264">    public void setTotalEnqueued(long v)          { this.totalEnqueued = v; }</span>
+<span class="nc" id="L265">    public void setTotalDequeued(long v)          { this.totalDequeued = v; }</span>
+<span class="nc" id="L266">    public void setTotalRejected(long v)          { this.totalRejected = v; }</span>
+<span class="nc" id="L267">    public void setPrinters(List&lt;PrinterInfo&gt; v)  { this.printers = v; }</span>
+<span class="nc" id="L268">    public void setQueuedJobs(List&lt;JobInfo&gt; v)    { this.queuedJobs = v; }</span>
+<span class="nc" id="L269">    public void setMetrics(Metrics v)             { this.metrics = v; }</span>
+<span class="nc" id="L270">    public void setSemaphorePermits(int v)         { this.semaphorePermits = v; }</span>
+<span class="nc" id="L271">    public void setSemaphoreWaiters(int v)         { this.semaphoreWaiters = v; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

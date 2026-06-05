@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.api.dto</a> &gt; <span class="el_source">ApiResponse.java</span></div><h1>ApiResponse.java</h1><pre class="source lang-java linenums">package com.printscheduler.api.dto;
+
+/**
+ * Generic API envelope for every REST response.
+ *
+ * &lt;pre&gt;
+ * {
+ *   &quot;success&quot;: true,
+ *   &quot;timestamp&quot;: 1234567890,
+ *   &quot;data&quot;: { ... },
+ *   &quot;error&quot;: null
+ * }
+ * &lt;/pre&gt;
+ *
+ * @param &lt;T&gt; payload type
+ */
+public class ApiResponse&lt;T&gt; {
+
+    private final boolean success;
+    private final long    timestamp;
+    private final T       data;
+    private final ErrorDetail error;
+
+<span class="nc" id="L24">    private ApiResponse(boolean success, T data, ErrorDetail error) {</span>
+<span class="nc" id="L25">        this.success   = success;</span>
+<span class="nc" id="L26">        this.timestamp = System.currentTimeMillis();</span>
+<span class="nc" id="L27">        this.data      = data;</span>
+<span class="nc" id="L28">        this.error     = error;</span>
+<span class="nc" id="L29">    }</span>
+
+    // ── Factory methods ───────────────────────────────────────────────────
+
+    public static &lt;T&gt; ApiResponse&lt;T&gt; ok(T data) {
+<span class="nc" id="L34">        return new ApiResponse&lt;&gt;(true, data, null);</span>
+    }
+
+    public static &lt;T&gt; ApiResponse&lt;T&gt; error(ErrorDetail error) {
+<span class="nc" id="L38">        return new ApiResponse&lt;&gt;(false, null, error);</span>
+    }
+
+    // ── Getters ───────────────────────────────────────────────────────────
+<span class="nc" id="L42">    public boolean     isSuccess()   { return success; }</span>
+<span class="nc" id="L43">    public long        getTimestamp(){ return timestamp; }</span>
+<span class="nc" id="L44">    public T           getData()     { return data; }</span>
+<span class="nc" id="L45">    public ErrorDetail getError()    { return error; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

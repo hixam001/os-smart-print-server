@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SimulationBroadcaster.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.websocket</a> &gt; <span class="el_source">SimulationBroadcaster.java</span></div><h1>SimulationBroadcaster.java</h1><pre class="source lang-java linenums">package com.printscheduler.websocket;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.printscheduler.model.SimulationSnapshot;
+import com.printscheduler.service.SimulationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+
+/**
+ * Periodically reads the current simulation state and broadcasts it to all
+ * connected WebSocket clients.
+ *
+ * &lt;h3&gt;Broadcast protocol&lt;/h3&gt;
+ * &lt;ul&gt;
+ *   &lt;li&gt;&lt;b&gt;STATE_UPDATE&lt;/b&gt; — sent every {@code broadcaster.interval-ms} (default 100 ms)
+ *       when state actually changed (delta detected via hash).&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;HEARTBEAT&lt;/b&gt; — sent every {@code broadcaster.heartbeat-interval-ms}
+ *       (default 30 s) when no state change has occurred.&lt;/li&gt;
+ * &lt;/ul&gt;
+ */
+@Component
+public class SimulationBroadcaster {
+
+<span class="nc" id="L30">    private static final Logger log = LoggerFactory.getLogger(SimulationBroadcaster.class);</span>
+
+    private final SimulationService          simulationService;
+    private final SimulationWebSocketHandler wsHandler;
+    private final ObjectMapper               objectMapper;
+
+    @Value(&quot;${simulation.broadcaster.heartbeat-interval-ms:30000}&quot;)
+    private long heartbeatIntervalMs;
+
+    /** Hash of the last broadcast payload — used for delta detection. */
+<span class="nc" id="L40">    private int  lastStateHash          = 0;</span>
+<span class="nc" id="L41">    private long lastBroadcastTimestamp = 0;</span>
+
+    public SimulationBroadcaster(SimulationService simulationService,
+                                  SimulationWebSocketHandler wsHandler,
+<span class="nc" id="L45">                                  ObjectMapper objectMapper) {</span>
+<span class="nc" id="L46">        this.simulationService = simulationService;</span>
+<span class="nc" id="L47">        this.wsHandler         = wsHandler;</span>
+<span class="nc" id="L48">        this.objectMapper      = objectMapper;</span>
+<span class="nc" id="L49">    }</span>
+
+    // ── Scheduled broadcast ───────────────────────────────────────────────
+
+    /**
+     * Runs every 100 ms (fixed rate from application.yml).
+     * Broadcasts STATE_UPDATE if state changed, otherwise sends HEARTBEAT
+     * every 30 seconds to keep connections alive.
+     */
+    @Scheduled(fixedRateString = &quot;${simulation.broadcaster.interval-ms:100}&quot;)
+    public void broadcastState() {
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (wsHandler.getConnectionCount() == 0) return;  // fast-path: nobody listening</span>
+
+        try {
+<span class="nc" id="L63">            SimulationSnapshot snapshot = simulationService.getState();</span>
+<span class="nc" id="L64">            String json = buildStateUpdateJson(snapshot);</span>
+
+<span class="nc" id="L66">            int newHash = json.hashCode();</span>
+<span class="nc" id="L67">            long now    = System.currentTimeMillis();</span>
+
+<span class="nc bnc" id="L69" title="All 2 branches missed.">            if (newHash != lastStateHash) {</span>
+                // State changed — send STATE_UPDATE
+<span class="nc" id="L71">                wsHandler.broadcast(json);</span>
+<span class="nc" id="L72">                lastStateHash          = newHash;</span>
+<span class="nc" id="L73">                lastBroadcastTimestamp = now;</span>
+
+<span class="nc bnc" id="L75" title="All 2 branches missed.">            } else if ((now - lastBroadcastTimestamp) &gt;= heartbeatIntervalMs) {</span>
+                // No change for 30 s — send HEARTBEAT to keep connection alive
+<span class="nc" id="L77">                wsHandler.broadcast(buildHeartbeatJson(now));</span>
+<span class="nc" id="L78">                lastBroadcastTimestamp = now;</span>
+            }
+
+<span class="nc" id="L81">        } catch (JsonProcessingException ex) {</span>
+<span class="nc" id="L82">            log.error(&quot;Failed to serialize simulation state for broadcast&quot;, ex);</span>
+<span class="nc" id="L83">            sendErrorToClients(&quot;STATE_SERIALIZATION_ERROR&quot;, ex.getMessage());</span>
+<span class="nc" id="L84">        } catch (Exception ex) {</span>
+<span class="nc" id="L85">            log.error(&quot;Unexpected broadcaster error&quot;, ex);</span>
+<span class="nc" id="L86">        }</span>
+<span class="nc" id="L87">    }</span>
+
+    // ── Message builders ──────────────────────────────────────────────────
+
+    /**
+     * Sends an EVENT message immediately (not batched) — called by the core
+     * team's simulator after significant events (job queued, completed, etc.).
+     *
+     * &lt;p&gt;Example usage from SimulationServiceImpl or PrinterThread:
+     * &lt;pre&gt;
+     *   broadcaster.publishEvent(&quot;COMPLETED&quot;, Map.of(&quot;jobId&quot;, &quot;Job-42&quot;, ...));
+     * &lt;/pre&gt;
+     */
+    public void publishEvent(String eventType, Map&lt;String, Object&gt; eventDetails) {
+        try {
+<span class="nc" id="L102">            Map&lt;String, Object&gt; envelope = Map.of(</span>
+                &quot;type&quot;,      &quot;EVENT&quot;,
+<span class="nc" id="L104">                &quot;timestamp&quot;, System.currentTimeMillis(),</span>
+<span class="nc" id="L105">                &quot;event&quot;,     Map.of(</span>
+                    &quot;eventType&quot;, eventType,
+                    &quot;details&quot;,   eventDetails
+                )
+            );
+<span class="nc" id="L110">            wsHandler.broadcast(objectMapper.writeValueAsString(envelope));</span>
+<span class="nc" id="L111">        } catch (JsonProcessingException ex) {</span>
+<span class="nc" id="L112">            log.error(&quot;Failed to publish event {} to WebSocket&quot;, eventType, ex);</span>
+<span class="nc" id="L113">        }</span>
+<span class="nc" id="L114">    }</span>
+
+    // ── Private helpers ───────────────────────────────────────────────────
+
+    private String buildStateUpdateJson(SimulationSnapshot snapshot)
+            throws JsonProcessingException {
+<span class="nc" id="L120">        Map&lt;String, Object&gt; envelope = Map.of(</span>
+            &quot;type&quot;,      &quot;STATE_UPDATE&quot;,
+<span class="nc" id="L122">            &quot;timestamp&quot;, System.currentTimeMillis(),</span>
+            &quot;data&quot;,      snapshot
+        );
+<span class="nc" id="L125">        return objectMapper.writeValueAsString(envelope);</span>
+    }
+
+    private String buildHeartbeatJson(long now) throws JsonProcessingException {
+<span class="nc" id="L129">        return objectMapper.writeValueAsString(Map.of(</span>
+            &quot;type&quot;,      &quot;HEARTBEAT&quot;,
+<span class="nc" id="L131">            &quot;timestamp&quot;, now</span>
+        ));
+    }
+
+    private void sendErrorToClients(String code, String message) {
+        try {
+<span class="nc" id="L137">            String json = objectMapper.writeValueAsString(Map.of(</span>
+                &quot;type&quot;,  &quot;ERROR&quot;,
+<span class="nc" id="L139">                &quot;timestamp&quot;, System.currentTimeMillis(),</span>
+<span class="nc" id="L140">                &quot;error&quot;, Map.of(&quot;code&quot;, code, &quot;message&quot;, message)</span>
+            ));
+<span class="nc" id="L142">            wsHandler.broadcast(json);</span>
+<span class="nc" id="L143">        } catch (JsonProcessingException ex) {</span>
+<span class="nc" id="L144">            log.error(&quot;Could not even serialize the error message&quot;, ex);</span>
+<span class="nc" id="L145">        }</span>
+<span class="nc" id="L146">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

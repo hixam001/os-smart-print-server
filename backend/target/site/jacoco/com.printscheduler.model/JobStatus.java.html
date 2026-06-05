@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JobStatus.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.model</a> &gt; <span class="el_source">JobStatus.java</span></div><h1>JobStatus.java</h1><pre class="source lang-java linenums">package com.printscheduler.model;
+
+/**
+ * Life-cycle state of a single print job.
+ *
+ * &lt;pre&gt;
+ *  QUEUED → PRINTING → COMPLETED
+ *                    ↘ FAILED
+ *  QUEUED → CANCELLED
+ * &lt;/pre&gt;
+ */
+<span class="nc" id="L12">public enum JobStatus {</span>
+    /** Job is in the print queue, waiting for a free printer. */
+<span class="nc" id="L14">    QUEUED,</span>
+
+    /** Job is currently being processed by a printer. */
+<span class="nc" id="L17">    PRINTING,</span>
+
+    /** Job finished successfully. */
+<span class="nc" id="L20">    COMPLETED,</span>
+
+    /** Job failed during printing (e.g. printer error). */
+<span class="nc" id="L23">    FAILED,</span>
+
+    /** Job was removed from the queue before it could print. */
+<span class="nc" id="L26">    CANCELLED</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
