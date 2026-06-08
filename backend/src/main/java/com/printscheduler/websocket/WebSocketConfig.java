@@ -6,11 +6,6 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
-/**
- * Registers the raw WebSocket endpoint at {@code ws://localhost:8080/ws/simulation}.
- *
- * <p>Uses raw WebSocket (no STOMP broker) for simplicity and lower latency.
- */
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {

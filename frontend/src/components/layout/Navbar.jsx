@@ -29,13 +29,13 @@ export default function Navbar() {
       </div>
 
       <div className="navbar-right">
-        {/* Tick counter */}
+        {}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: 'var(--text-muted)' }}>
           <span style={{ fontFamily: 'var(--font-mono)' }}>tick</span>
           <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>#{tick}</span>
         </div>
 
-        {/* Elapsed time */}
+        {}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '3px 10px', borderRadius: 6,
@@ -48,7 +48,7 @@ export default function Navbar() {
           </span>
         </div>
 
-        {/* Algorithm + speed */}
+        {}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 0,
           background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -62,10 +62,10 @@ export default function Navbar() {
           </span>
         </div>
 
-        {/* Status */}
+        {}
         <span className={`status-badge ${status}`}>{status}</span>
 
-        {/* Connection */}
+        {}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
           <div className={`conn-dot ${connected ? 'connected' : ''}`} />
           {connected ? 'WS Live' : 'Reconnecting…'}

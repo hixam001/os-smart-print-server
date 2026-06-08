@@ -1,22 +1,20 @@
 import { create } from 'zustand';
 
-const MAX_HISTORY = 60; // keep 60 data points (~6s at 100ms updates)
+const MAX_HISTORY = 60;
 const MAX_EVENTS  = 100;
 
 export const useSimulationStore = create((set, get) => ({
-  // ── Connection state ────────────────────────────────────────────────────
+
   connected:   false,
   clientId:    null,
   lastHeartbeat: null,
 
-  // ── Simulation snapshot ─────────────────────────────────────────────────
-  status:        'STOPPED',  // STOPPED | RUNNING | PAUSED
+  status:        'STOPPED',
   algorithm:     'FCFS',
   simulationSpeed: 1.0,
   elapsedMs:     0,
   tick:          0,
 
-  // ── Queue ───────────────────────────────────────────────────────────────
   queueSize:     0,
   queueCapacity: 20,
   totalEnqueued: 0,
@@ -24,10 +22,8 @@ export const useSimulationStore = create((set, get) => ({
   totalRejected: 0,
   queuedJobs:    [],
 
-  // ── Printers ────────────────────────────────────────────────────────────
   printers: [],
 
-  // ── Metrics ─────────────────────────────────────────────────────────────
   metrics: {
     totalJobsCompleted:  0,
     totalJobsFailed:     0,
@@ -39,21 +35,17 @@ export const useSimulationStore = create((set, get) => ({
     colorJobRatio:       0,
   },
 
-  // ── Historical time series (for charts) ───────────────────────────────────
-  throughputHistory:  [], // [{ t, v }]
+  throughputHistory:  [],
   waitTimeHistory:    [],
   queueSizeHistory:   [],
   rejectedHistory:    [],
 
-  // ── Semaphore deep-dive ─────────────────────────────────────────────
   semaphorePermits:  0,
   semaphoreWaiters:  0,
-  semaphoreHistory:  [], // [{ t, permits, waiters }]
+  semaphoreHistory:  [],
 
-  // ── Event feed ──────────────────────────────────────────────────────────
-  events: [],  // [{ id, type, eventType, details, timestamp }]
+  events: [],
 
-  // ── Actions ─────────────────────────────────────────────────────────────
   setConnected: (connected, clientId = null) =>
     set({ connected, clientId }),
 
@@ -63,7 +55,6 @@ export const useSimulationStore = create((set, get) => ({
     const prev = get();
     const now  = Date.now();
 
-    // Build new history points
     const addPoint = (arr, v) => {
       const next = [...arr, { t: now, v }];
       return next.length > MAX_HISTORY ? next.slice(-MAX_HISTORY) : next;
@@ -91,7 +82,6 @@ export const useSimulationStore = create((set, get) => ({
       queueSizeHistory:  addPoint(prev.queueSizeHistory,  data.queueSize                      ?? 0),
       rejectedHistory:   addPoint(prev.rejectedHistory,   data.totalRejected                  ?? 0),
 
-      // Semaphore state
       semaphorePermits: data.semaphorePermits ?? prev.semaphorePermits,
       semaphoreWaiters: data.semaphoreWaiters ?? prev.semaphoreWaiters,
       semaphoreHistory: (() => {

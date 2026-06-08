@@ -1,15 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useSimulationStore } from '../../store/simulationStore';
 
-/* ────────────────────────────────────────────────────────────────────────────
- * SemaphoreDeepDive
- * Detailed visualisation of the counting semaphore:
- *  - Permit dots (available vs consumed)
- *  - Blocked waiter count (threads stuck in acquire())
- *  - Live operation log (WAIT / ACQUIRED / RELEASED)
- *  - Mini sparkline of permit count over time
- * ─────────────────────────────────────────────────────────────────────────── */
-
 const MAX_OPS = 20;
 
 const OP_STYLE = {
@@ -26,12 +17,10 @@ export default function SemaphoreDeepDive() {
   const queueCap = useSimulationStore(s => s.queueCapacity);
   const canvasRef = useRef(null);
 
-  // Filter only semaphore events from the event feed
   const semOps = events
     .filter(e => OP_STYLE[e.eventType])
     .slice(0, MAX_OPS);
 
-  // Draw sparkline on canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || history.length < 2) return;
@@ -41,7 +30,6 @@ export default function SemaphoreDeepDive() {
 
     const maxP = Math.max(...history.map(h => h.permits), 1);
 
-    // Permits line
     ctx.beginPath();
     ctx.strokeStyle = '#14b8a6';
     ctx.lineWidth = 2;
@@ -52,12 +40,10 @@ export default function SemaphoreDeepDive() {
     });
     ctx.stroke();
 
-    // Fill under permits line
     ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
     ctx.fillStyle = 'rgba(20,184,166,0.08)';
     ctx.fill();
 
-    // Waiters line
     if (history.some(h => h.waiters > 0)) {
       const maxW = Math.max(...history.map(h => h.waiters), 1);
       ctx.beginPath();
@@ -92,7 +78,7 @@ export default function SemaphoreDeepDive() {
 
       <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-        {/* Theory callout */}
+        {}
         <div style={{
           background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)',
           borderRadius: 10, padding: '10px 14px', fontSize: '0.72rem', lineHeight: 1.6,
@@ -108,7 +94,7 @@ export default function SemaphoreDeepDive() {
           This solves the <strong style={{ color: '#f43f5e' }}>Producer-Consumer problem</strong> without busy-waiting.
         </div>
 
-        {/* Permit dots */}
+        {}
         <div>
           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
             Permit Pool — {permits}/{capacity} available
@@ -142,7 +128,7 @@ export default function SemaphoreDeepDive() {
           </div>
         </div>
 
-        {/* Waiters display */}
+        {}
         {waiters > 0 && (
           <div style={{
             background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
@@ -160,7 +146,7 @@ export default function SemaphoreDeepDive() {
           </div>
         )}
 
-        {/* Sparkline */}
+        {}
         {history.length > 2 && (
           <div>
             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -176,7 +162,7 @@ export default function SemaphoreDeepDive() {
           </div>
         )}
 
-        {/* Operation log */}
+        {}
         <div>
           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
             Live Operations

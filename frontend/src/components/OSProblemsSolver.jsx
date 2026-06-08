@@ -1,12 +1,6 @@
 import { useMemo } from 'react';
 import { useSimulationStore } from '../store/simulationStore';
 
-/* ────────────────────────────────────────────────────────────────────────────
- * OSProblemsSolver
- * Shows each classic OS problem side-by-side with its solution and
- * live counters pulled from the simulation state.
- * ─────────────────────────────────────────────────────────────────────────── */
-
 export default function OSProblemsSolver() {
   const events   = useSimulationStore(s => s.events);
   const metrics  = useSimulationStore(s => s.metrics);
@@ -16,7 +10,6 @@ export default function OSProblemsSolver() {
   const queueCap  = useSimulationStore(s => s.queueCapacity);
   const status    = useSimulationStore(s => s.status);
 
-  // Derive live counters from event history
   const counters = useMemo(() => {
     let semWaits = 0, semAcqs = 0, semRels = 0;
     let paperJams = 0, recoveries = 0;
@@ -179,7 +172,7 @@ function ProblemCard({ p }) {
       onMouseEnter={e => e.currentTarget.style.borderColor = `${p.color}88`}
       onMouseLeave={e => e.currentTarget.style.borderColor = `${p.color}33`}
     >
-      {/* Card header */}
+      {}
       <div style={{
         background: `linear-gradient(135deg, ${p.color}18, ${p.color}08)`,
         borderBottom: `1px solid ${p.color}22`,
@@ -204,7 +197,7 @@ function ProblemCard({ p }) {
 
       <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* Problem */}
+        {}
         <div>
           <Label color="#f43f5e">❌ The Problem</Label>
           <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
@@ -212,14 +205,14 @@ function ProblemCard({ p }) {
           </p>
         </div>
 
-        {/* Solution */}
+        {}
         <div>
           <Label color="#10b981">✅ Our Solution: <span style={{ color: '#34d399', fontWeight: 800 }}>{p.solution}</span></Label>
           <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 6px' }}>
             {p.solutionDetail}
           </p>
 
-          {/* Code block */}
+          {}
           <pre style={{
             background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)',
             borderRadius: 6, padding: '8px 10px',
@@ -230,7 +223,7 @@ function ProblemCard({ p }) {
           </pre>
         </div>
 
-        {/* Live counters */}
+        {}
         {p.counter && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {p.counter.map(c => (
@@ -251,7 +244,7 @@ function ProblemCard({ p }) {
           </div>
         )}
 
-        {/* Live metric */}
+        {}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '6px 10px', borderRadius: 8,

@@ -48,7 +48,7 @@ export default function MetricsPanel() {
       </div>
       <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* Row 1: Job outcome counts */}
+        {}
         <div className="row-4">
           <StatCard
             id="metric-completed"
@@ -90,7 +90,7 @@ export default function MetricsPanel() {
 
         <div className="divider" />
 
-        {/* Row 2: Timing + resource metrics */}
+        {}
         <div className="row-4">
           <StatCard
             id="metric-avgwait"
@@ -126,7 +126,7 @@ export default function MetricsPanel() {
           />
         </div>
 
-        {/* Colour ratio mini-bar */}
+        {}
         {colorJobRatio > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: 80 }}>Colour ratio</span>

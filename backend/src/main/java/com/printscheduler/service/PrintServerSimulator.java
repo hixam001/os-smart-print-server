@@ -9,14 +9,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-/**
- * Orchestrates the active simulation run, managing threads, synchronization tools, and state snapshots.
- */
 public class PrintServerSimulator {
 
-    /**
-     * Callback interface to publish events to the WebSocket layer without circular dependencies.
-     */
     public interface EventListener {
         void onEvent(String eventType, Map<String, Object> details);
     }
@@ -39,12 +33,10 @@ public class PrintServerSimulator {
         this.eventListener = eventListener;
         this.queue = new PrintQueue(config.getQueueCapacity(), config.getAlgorithm());
 
-        // Initialize printers
         for (int i = 1; i <= config.getNumPrinters(); i++) {
             printers.add(new Printer(i));
         }
 
-        // Wire semaphore event listener — broadcasts acquire/release/wait events
         this.jobsAvailable.setEventListener((type, thread, permits, waiters) ->
             publishEvent(type, java.util.Map.of(
                 "thread",  thread,
@@ -54,12 +46,9 @@ public class PrintServerSimulator {
         );
     }
 
-    /**
-     * Starts the simulator and spawns the User and Printer threads.
-     */
     public synchronized void start() {
         if (running.getAndSet(true)) {
-            return; // Already running
+            return;
         }
 
         PrintJob.resetIdSequence();
@@ -67,14 +56,12 @@ public class PrintServerSimulator {
         queue.resetMetrics();
         clock.start(config.getSimulationSpeed());
 
-        // Start printer threads
         for (Printer printer : printers) {
             PrinterThread pt = new PrinterThread(printer, this);
             printerThreads.add(pt);
             pt.start();
         }
 
-        // Start user threads
         for (int i = 1; i <= config.getNumUsers(); i++) {
             UserThread ut = new UserThread(i, this);
             userThreads.add(ut);
@@ -82,9 +69,6 @@ public class PrintServerSimulator {
         }
     }
 
-    /**
-     * Pauses the simulator.
-     */
     public synchronized void pause() {
         if (running.get() && !pauseCoordinator.isPaused()) {
             pauseCoordinator.pause();
@@ -92,9 +76,6 @@ public class PrintServerSimulator {
         }
     }
 
-    /**
-     * Resumes the simulator.
-     */
     public synchronized void resume() {
         if (running.get() && pauseCoordinator.isPaused()) {
             clock.resume();
@@ -102,15 +83,11 @@ public class PrintServerSimulator {
         }
     }
 
-    /**
-     * Stops the simulator and interrupts all threads to shut down gracefully.
-     */
     public synchronized void stop() {
         if (!running.getAndSet(false)) {
             return;
         }
 
-        // Interrupt threads to terminate them
         for (UserThread ut : userThreads) {
             ut.interrupt();
         }
@@ -121,8 +98,7 @@ public class PrintServerSimulator {
         userThreads.clear();
         printerThreads.clear();
         clock.stop();
-        
-        // Return printers to IDLE or cancel active jobs
+
         for (Printer p : printers) {
             PrintJob cur = p.getCurrentJob();
             if (cur != null) {
@@ -131,14 +107,10 @@ public class PrintServerSimulator {
             }
             p.reset();
         }
-        
-        // Cancel all remaining jobs in queue
+
         queue.clear(clock.getSimulatedTimeMs());
     }
 
-    /**
-     * Stops and fully resets database, queue and clock.
-     */
     public synchronized void reset() {
         stop();
         database.reset();
@@ -146,9 +118,6 @@ public class PrintServerSimulator {
         clock.reset();
     }
 
-    /**
-     * Applies configuration updates at runtime.
-     */
     public synchronized void configure(ConfigUpdateRequest request) {
         if (request.getAlgorithm() != null) {
             queue.setAlgorithm(request.getAlgorithm());
@@ -202,14 +171,11 @@ public class PrintServerSimulator {
         }
     }
 
-    /**
-     * Builds and returns a snapshot of the current state of the simulation.
-     */
     public SimulationState getSimulationState() {
         SimulationState state = new SimulationState();
         long now = clock.getSimulatedTimeMs();
 
-        state.setStatus(pauseCoordinator.isPaused() ? SimulationStatus.PAUSED 
+        state.setStatus(pauseCoordinator.isPaused() ? SimulationStatus.PAUSED
                 : (running.get() ? SimulationStatus.RUNNING : SimulationStatus.STOPPED));
         state.setElapsedMs(now);
         state.setAlgorithm(queue.getAlgorithm());
@@ -222,22 +188,18 @@ public class PrintServerSimulator {
         state.setTotalDequeued(queue.getTotalDequeued());
         state.setTotalRejected(queue.getTotalRejected());
 
-        // Map printers to PrinterInfo
         List<SimulationState.PrinterInfo> printerInfos = printers.stream()
                 .map(p -> SimulationState.PrinterInfo.from(p, now))
                 .collect(Collectors.toList());
         state.setPrinters(printerInfos);
 
-        // Map queued jobs to JobInfo
         List<SimulationState.JobInfo> queuedJobInfos = queue.getQueuedJobsSnapshot().stream()
                 .map(SimulationState.JobInfo::from)
                 .collect(Collectors.toList());
         state.setQueuedJobs(queuedJobInfos);
 
-        // Recompute simulation-wide metrics
         state.setMetrics(database.buildMetrics(now));
 
-        // Expose semaphore state for the UI semaphore deep-dive panel
         state.setSemaphorePermits(jobsAvailable.getPermits());
         state.setSemaphoreWaiters(jobsAvailable.getWaiters());
 

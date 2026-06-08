@@ -2,17 +2,6 @@ package com.printscheduler.api.dto;
 
 import java.util.Map;
 
-/**
- * Structured error payload included in every failed API response.
- *
- * <pre>
- * {
- *   "code": "SIMULATION_ALREADY_RUNNING",
- *   "message": "Cannot start: simulation is already running",
- *   "details": { }
- * }
- * </pre>
- */
 public class ErrorDetail {
 
     private final String              code;

@@ -2,10 +2,6 @@ package com.printscheduler.model;
 
 import jakarta.validation.constraints.*;
 
-/**
- * Configuration supplied by the client when starting or re-configuring a simulation.
- * All fields are validated before reaching the simulator.
- */
 public class SimulationConfig {
 
     @Min(value = 1, message = "numUsers must be between 1 and 20")
@@ -22,7 +18,7 @@ public class SimulationConfig {
 
     @Min(value = 100, message = "jobIntervalMs must be between 100 and 10000")
     @Max(value = 10000, message = "jobIntervalMs must be between 100 and 10000")
-    private long jobIntervalMs = 5000;   // users submit a job every ~5s
+    private long jobIntervalMs = 5000;
 
     @Pattern(regexp = "FCFS|SJF|HYBRID",
              message = "algorithm must be one of: FCFS, SJF, HYBRID")
@@ -38,12 +34,10 @@ public class SimulationConfig {
 
     @DecimalMin(value = "0.1", message = "simulationSpeed must be between 0.1 and 10.0")
     @DecimalMax(value = "10.0", message = "simulationSpeed must be between 0.1 and 10.0")
-    private double simulationSpeed = 2.0; // 2× makes print delays watchable
+    private double simulationSpeed = 2.0;
 
-    // ── Constructors ──────────────────────────────────────────────────────
     public SimulationConfig() {}
 
-    // ── Getters / Setters ─────────────────────────────────────────────────
     public int    getNumUsers()           { return numUsers; }
     public void   setNumUsers(int v)      { this.numUsers = v; }
 

@@ -21,18 +21,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Centralized exception handler — every unhandled exception is caught here,
- * formatted as a structured {@link ApiResponse}, and logged properly.
- *
- * <p>Stack traces are NEVER exposed in the response body.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    // ── 409 Conflict: illegal state transitions ───────────────────────────
 
     @ExceptionHandler(SimulationAlreadyRunningException.class)
     public ResponseEntity<ApiResponse<Void>> handleAlreadyRunning(
@@ -54,8 +46,6 @@ public class GlobalExceptionHandler {
         log.warn("409 – {}", ex.getMessage());
         return conflict("SIMULATION_NOT_PAUSED", ex.getMessage());
     }
-
-    // ── 400 Bad Request: validation failures ─────────────────────────────
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(
@@ -90,23 +80,17 @@ public class GlobalExceptionHandler {
         return badRequest("MALFORMED_REQUEST", "Request body is missing or malformed", Map.of());
     }
 
-    // ── Catch-all: any remaining SimulationException ──────────────────────
-
     @ExceptionHandler(SimulationException.class)
     public ResponseEntity<ApiResponse<Void>> handleSimulation(SimulationException ex) {
         log.error("500 – unhandled SimulationException: {}", ex.getMessage(), ex);
         return internalError("SIMULATION_ERROR", ex.getMessage());
     }
 
-    // ── 500 Internal Server Error ─────────────────────────────────────────
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
         log.error("500 – unexpected error", ex);
         return internalError("INTERNAL_ERROR", "An unexpected error occurred");
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────
 
     private ResponseEntity<ApiResponse<Void>> conflict(String code, String message) {
         return ResponseEntity

@@ -4,84 +4,44 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * A point-in-time snapshot of the entire simulation.
- *
- * <p>This class is what the {@code SimulationServiceImpl} returns from
- * {@code getState()} and what the WebSocket broadcaster serialises
- * into JSON every 100 ms.  It contains everything the frontend needs
- * to render the live dashboard:
- *
- * <ul>
- *   <li>Overall status + elapsed time</li>
- *   <li>Active scheduling algorithm and simulation speed</li>
- *   <li>Queue depth and per-algorithm admission metrics</li>
- *   <li>Per-printer state (status, current job, completions)</li>
- *   <li>All QUEUED jobs currently waiting</li>
- *   <li>Aggregated simulation-wide metrics</li>
- * </ul>
- *
- * <p>All fields are plain POJOs so Jackson can serialise without any
- * additional annotations.  No live mutable state is exposed—callers
- * should build a new instance on each tick.
- */
 public class SimulationState {
 
-    // ── Top-level simulation context ──────────────────────────────────────
     private SimulationStatus status;
     private long             elapsedMs;
     private String           algorithm;
     private double           simulationSpeed;
-    private int              tick;              // simulation tick counter
+    private int              tick;
 
-    // ── Queue summary ──────────────────────────────────────────────────────
     private int  queueSize;
     private int  queueCapacity;
     private long totalEnqueued;
     private long totalDequeued;
-    private long totalRejected;   // jobs turned away (queue full)
+    private long totalRejected;
 
-    // ── Per-printer snapshots ─────────────────────────────────────────────
     private List<PrinterInfo> printers = new ArrayList<>();
 
-    // ── Queued job list (for the live queue panel) ─────────────────────────
     private List<JobInfo> queuedJobs = new ArrayList<>();
 
-    // ── Aggregated metrics ────────────────────────────────────────────────
     private Metrics metrics = new Metrics();
 
-    // ── Semaphore deep-dive (for UI visualization) ────────────────────────
-    private int semaphorePermits = 0;   // current available permits
-    private int semaphoreWaiters = 0;   // printer threads blocked on acquire()
+    private int semaphorePermits = 0;
+    private int semaphoreWaiters = 0;
 
-    // ── Constructors ──────────────────────────────────────────────────────
     public SimulationState() {}
 
-    // =========================================================================
-    //  Nested: PrinterInfo
-    // =========================================================================
-
-    /**
-     * Lightweight projection of a {@link Printer} for JSON serialisation.
-     * Avoids exposing the mutable Printer domain object directly.
-     */
     public static class PrinterInfo {
         private int    printerId;
         private String name;
-        private String status;              // PrinterStatus name
-        private Long   currentJobId;        // null if idle
-        private int    currentJobPages;     // 0 if idle
-        private long   jobProgressPercent;  // 0–100
+        private String status;
+        private Long   currentJobId;
+        private int    currentJobPages;
+        private long   jobProgressPercent;
         private int    jobsCompleted;
         private long   totalPages;
         private double averagePrintTimeMs;
 
         public PrinterInfo() {}
 
-        /**
-         * Builds a {@code PrinterInfo} from a live {@link Printer} and
-         * the current simulation time.
-         */
         public static PrinterInfo from(Printer printer, long nowMs) {
             PrinterInfo pi = new PrinterInfo();
             pi.printerId         = printer.getPrinterId();
@@ -111,7 +71,6 @@ public class SimulationState {
             return pi;
         }
 
-        // Getters
         public int    getPrinterId()          { return printerId; }
         public String getName()               { return name; }
         public String getStatus()             { return status; }
@@ -122,7 +81,6 @@ public class SimulationState {
         public long   getTotalPages()         { return totalPages; }
         public double getAveragePrintTimeMs() { return averagePrintTimeMs; }
 
-        // Setters (for Jackson / tests)
         public void setPrinterId(int v)          { this.printerId = v; }
         public void setName(String v)             { this.name = v; }
         public void setStatus(String v)           { this.status = v; }
@@ -134,13 +92,6 @@ public class SimulationState {
         public void setAveragePrintTimeMs(double v){ this.averagePrintTimeMs = v; }
     }
 
-    // =========================================================================
-    //  Nested: JobInfo
-    // =========================================================================
-
-    /**
-     * Lightweight projection of a {@link PrintJob} for JSON serialisation.
-     */
     public static class JobInfo {
         private long   jobId;
         private int    userId;
@@ -149,12 +100,11 @@ public class SimulationState {
         private int    priority;
         private String status;
         private long   submittedAt;
-        private long   waitingTimeMs;   // -1 if still queued
-        private long   turnaroundTimeMs; // -1 if not completed
+        private long   waitingTimeMs;
+        private long   turnaroundTimeMs;
 
         public JobInfo() {}
 
-        /** Builds a {@code JobInfo} from a live {@link PrintJob}. */
         public static JobInfo from(PrintJob job) {
             JobInfo ji = new JobInfo();
             ji.jobId          = job.getJobId();
@@ -169,7 +119,6 @@ public class SimulationState {
             return ji;
         }
 
-        // Getters
         public long   getJobId()           { return jobId; }
         public int    getUserId()          { return userId; }
         public int    getPageCount()       { return pageCount; }
@@ -180,7 +129,6 @@ public class SimulationState {
         public long   getWaitingTimeMs()   { return waitingTimeMs; }
         public long   getTurnaroundTimeMs(){ return turnaroundTimeMs; }
 
-        // Setters (for Jackson / tests)
         public void setJobId(long v)            { this.jobId = v; }
         public void setUserId(int v)            { this.userId = v; }
         public void setPageCount(int v)         { this.pageCount = v; }
@@ -192,15 +140,6 @@ public class SimulationState {
         public void setTurnaroundTimeMs(long v) { this.turnaroundTimeMs = v; }
     }
 
-    // =========================================================================
-    //  Nested: Metrics
-    // =========================================================================
-
-    /**
-     * Aggregated performance metrics for the simulation run so far.
-     *
-     * <p>All values are computed from the {@link Database} at snapshot time.
-     */
     public static class Metrics {
         private int    totalJobsCompleted;
         private int    totalJobsFailed;
@@ -208,12 +147,11 @@ public class SimulationState {
         private double avgWaitingTimeMs;
         private double avgTurnaroundTimeMs;
         private double avgPageCount;
-        private long   throughputJobsPerMin;  // jobs completed per simulated minute
-        private double colorJobRatio;         // fraction of completed jobs that were colour
+        private long   throughputJobsPerMin;
+        private double colorJobRatio;
 
         public Metrics() {}
 
-        // Getters
         public int    getTotalJobsCompleted()   { return totalJobsCompleted; }
         public int    getTotalJobsFailed()      { return totalJobsFailed; }
         public int    getTotalJobsCancelled()   { return totalJobsCancelled; }
@@ -223,7 +161,6 @@ public class SimulationState {
         public long   getThroughputJobsPerMin() { return throughputJobsPerMin; }
         public double getColorJobRatio()        { return colorJobRatio; }
 
-        // Setters
         public void setTotalJobsCompleted(int v)    { this.totalJobsCompleted = v; }
         public void setTotalJobsFailed(int v)       { this.totalJobsFailed = v; }
         public void setTotalJobsCancelled(int v)    { this.totalJobsCancelled = v; }
@@ -233,8 +170,6 @@ public class SimulationState {
         public void setThroughputJobsPerMin(long v) { this.throughputJobsPerMin = v; }
         public void setColorJobRatio(double v)      { this.colorJobRatio = v; }
     }
-
-    // ── Top-level getters ─────────────────────────────────────────────────
 
     public SimulationStatus getStatus()          { return status; }
     public long             getElapsedMs()        { return elapsedMs; }
@@ -251,8 +186,6 @@ public class SimulationState {
     public Metrics           getMetrics()        { return metrics; }
     public int               getSemaphorePermits() { return semaphorePermits; }
     public int               getSemaphoreWaiters() { return semaphoreWaiters; }
-
-    // ── Top-level setters ─────────────────────────────────────────────────
 
     public void setStatus(SimulationStatus v)     { this.status = v; }
     public void setElapsedMs(long v)              { this.elapsedMs = v; }

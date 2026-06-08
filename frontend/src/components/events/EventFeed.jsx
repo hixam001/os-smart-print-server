@@ -112,7 +112,7 @@ export default function EventFeed() {
             const meta = EVENT_META[ev.eventType] ?? EVENT_META.UNKNOWN;
             return (
               <div key={ev.id} className="event-row">
-                {/* Icon dot */}
+                {}
                 <div style={{
                   width: 26, height: 26, borderRadius: 8, flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -121,7 +121,7 @@ export default function EventFeed() {
                   {meta.icon}
                 </div>
 
-                {/* Badge + message */}
+                {}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{

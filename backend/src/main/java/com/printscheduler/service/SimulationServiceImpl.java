@@ -14,26 +14,11 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Stub implementation of {@link SimulationService}.
- *
- * <hr>
- * <h3>🔧 Core Team: This is where you plug in your simulator.</h3>
- *
- * <p>Replace the stub bodies below with calls to your
- * {@code PrintServerSimulator} class.  The state machine guard-checks
- * (already implemented) can stay as-is.
- *
- * <p>Keep this class annotated with {@code @Service} so Spring autowires it.
- *
- * <hr>
- */
 @Service
 public class SimulationServiceImpl implements SimulationService {
 
     private static final Logger log = LoggerFactory.getLogger(SimulationServiceImpl.class);
 
-    // ── State machine ─────────────────────────────────────────────────────
     private final AtomicReference<SimulationStatus> status =
         new AtomicReference<>(SimulationStatus.STOPPED);
 
@@ -47,10 +32,6 @@ public class SimulationServiceImpl implements SimulationService {
     private com.printscheduler.websocket.SimulationBroadcaster broadcaster;
 
     private volatile PrintServerSimulator simulator = null;
-
-    // =========================================================================
-    //  SimulationService implementation
-    // =========================================================================
 
     @Override
     public void start(SimulationConfig config) {

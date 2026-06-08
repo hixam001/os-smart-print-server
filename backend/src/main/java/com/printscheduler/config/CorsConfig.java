@@ -5,10 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/**
- * Global CORS configuration for all REST endpoints.
- * WebSocket CORS is handled separately in {@link com.printscheduler.websocket.WebSocketConfig}.
- */
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
 

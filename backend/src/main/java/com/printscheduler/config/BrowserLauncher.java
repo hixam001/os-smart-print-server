@@ -10,10 +10,6 @@ import org.springframework.stereotype.Component;
 import java.awt.Desktop;
 import java.net.URI;
 
-/**
- * Opens the default browser to the dashboard URL when Spring Boot has fully started.
- * Falls back to xdg-open / open on systems without AWT support (Linux headless).
- */
 @Component
 public class BrowserLauncher {
 
@@ -32,7 +28,6 @@ public class BrowserLauncher {
 
         log.info("Dashboard ready → {}", url);
 
-        // Try Java AWT Desktop first (works on desktop JDKs with display)
         if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
             try {
                 Desktop.getDesktop().browse(new URI(url));
@@ -42,7 +37,6 @@ public class BrowserLauncher {
             }
         }
 
-        // Fallback: xdg-open (Linux), open (macOS), start (Windows)
         String os = System.getProperty("os.name", "").toLowerCase();
         String[] cmd;
         if (os.contains("linux"))   cmd = new String[]{"xdg-open", url};

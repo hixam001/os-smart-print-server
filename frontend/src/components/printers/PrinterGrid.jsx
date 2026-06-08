@@ -57,7 +57,7 @@ function PrinterCard({ printer }) {
 
   return (
     <div className={`printer-card ${status} animate-scale`} id={`printer-${printerId}`}>
-      {/* Header row */}
+      {}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
         <span style={{ fontSize: '0.9rem' }}>{statusIcons[status] ?? '🖨'}</span>
         <span className="printer-name" style={{ flex: 1, textAlign: 'left', fontSize: '0.82rem' }}>
@@ -66,10 +66,10 @@ function PrinterCard({ printer }) {
         <span className={`printer-status-text ${status}`}>{status}</span>
       </div>
 
-      {/* Progress ring */}
+      {}
       <ProgressRing percent={Number(jobProgressPercent)} status={status} />
 
-      {/* Current job info */}
+      {}
       {currentJobId ? (
         <div className="printer-job-info">
           <div>Job <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>#{currentJobId}</strong></div>
@@ -81,7 +81,7 @@ function PrinterCard({ printer }) {
         </div>
       )}
 
-      {/* Progress bar (only when BUSY) */}
+      {}
       {status === 'BUSY' && (
         <div style={{ width: '100%' }}>
           <div style={{
@@ -103,7 +103,7 @@ function PrinterCard({ printer }) {
 
       <div className="divider" style={{ width: '100%', margin: '2px 0' }} />
 
-      {/* Stats row */}
+      {}
       <div className="printer-stats">
         <div className="printer-stat">
           <span className="printer-stat-val glow-emerald" style={{ fontSize: '0.95rem' }}>{jobsCompleted}</span>
@@ -148,7 +148,7 @@ export default function PrinterGrid() {
         </div>
       </div>
 
-      {/* Utilisation bar */}
+      {}
       {printers.length > 0 && (
         <div style={{ padding: '8px 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ flex: 1, height: 4, background: 'var(--bg-surface)', borderRadius: 2, overflow: 'hidden' }}>

@@ -106,7 +106,7 @@ export default function OSProblemsPanel() {
                 className={`problem-card ${problemStatus}`}
                 style={{ '--problem-color': color }}
               >
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{
                     width: 34, height: 34, borderRadius: 9,
@@ -125,7 +125,7 @@ export default function OSProblemsPanel() {
                       {title}
                     </div>
                   </div>
-                  {/* Status indicator */}
+                  {}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <div
                       className={`problem-indicator ${problemStatus}`}
@@ -149,12 +149,12 @@ export default function OSProblemsPanel() {
                   </div>
                 </div>
 
-                {/* Description */}
+                {}
                 <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
                   {description}
                 </p>
 
-                {/* Live detail */}
+                {}
                 <div style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.65rem',

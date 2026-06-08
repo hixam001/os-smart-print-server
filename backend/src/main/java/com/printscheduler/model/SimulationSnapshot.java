@@ -1,13 +1,5 @@
 package com.printscheduler.model;
 
-/**
- * Lightweight, loosely-typed snapshot of the current simulation state.
- *
- * <p>The {@code details} field is left as {@code Object} intentionally:
- * when the core OS team plugs in their simulator they can return any
- * serialisable object (PrintJob lists, semaphore state, metrics, etc.)
- * and Jackson will serialize it directly — no coupling to this layer.
- */
 public class SimulationSnapshot {
 
     private SimulationStatus status = SimulationStatus.STOPPED;
@@ -16,13 +8,8 @@ public class SimulationSnapshot {
     private double           simulationSpeed  = 1.0;
     private String           message = "";
 
-    /**
-     * Rich details injected by the core simulator implementation.
-     * Can be any Jackson-serialisable object: Map, SimulationState POJO, etc.
-     */
     private Object details = null;
 
-    // ── Constructors ──────────────────────────────────────────────────────
     public SimulationSnapshot() {}
 
     public SimulationSnapshot(SimulationStatus status, long currentTimeMs,
@@ -36,7 +23,6 @@ public class SimulationSnapshot {
         this.details          = details;
     }
 
-    // ── Getters / Setters ─────────────────────────────────────────────────
     public SimulationStatus getStatus()            { return status; }
     public void setStatus(SimulationStatus s)      { this.status = s; }
 

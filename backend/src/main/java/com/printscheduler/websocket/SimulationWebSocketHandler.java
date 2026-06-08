@@ -15,21 +15,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Manages all active WebSocket connections to {@code /ws/simulation}.
- *
- * <p>On connect: assigns a client ID and sends a CONNECTED acknowledgement.<br>
- * On disconnect: removes the session from the active list.<br>
- * On error: logs and removes the offending session.
- *
- * <p>{@link SimulationBroadcaster} calls {@link #broadcast(String)} every 100 ms.
- */
 @Component
 public class SimulationWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(SimulationWebSocketHandler.class);
 
-    /** Thread-safe list of currently active client sessions. */
     private final List<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
 
     private final ObjectMapper objectMapper;
@@ -37,8 +27,6 @@ public class SimulationWebSocketHandler extends TextWebSocketHandler {
     public SimulationWebSocketHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
-
-    // ── Connection lifecycle ──────────────────────────────────────────────
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -68,14 +56,6 @@ public class SimulationWebSocketHandler extends TextWebSocketHandler {
         log.warn("WebSocket transport error — session removed: {}", exception.getMessage());
     }
 
-    // ── Broadcasting ──────────────────────────────────────────────────────
-
-    /**
-     * Sends a JSON message to every connected client.
-     * Dead sessions are detected and removed automatically.
-     *
-     * @param json fully serialised JSON string to send
-     */
     public void broadcast(String json) {
         if (sessions.isEmpty()) return;
 
@@ -86,7 +66,7 @@ public class SimulationWebSocketHandler extends TextWebSocketHandler {
                 continue;
             }
             try {
-                synchronized (session) {          // TextMessage sends must be serialised per-session
+                synchronized (session) {
                     session.sendMessage(message);
                 }
             } catch (IOException ex) {
@@ -96,6 +76,5 @@ public class SimulationWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /** @return number of currently connected clients */
     public int getConnectionCount() { return sessions.size(); }
 }

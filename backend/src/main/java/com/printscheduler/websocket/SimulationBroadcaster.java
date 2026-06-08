@@ -12,18 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * Periodically reads the current simulation state and broadcasts it to all
- * connected WebSocket clients.
- *
- * <h3>Broadcast protocol</h3>
- * <ul>
- *   <li><b>STATE_UPDATE</b> — sent every {@code broadcaster.interval-ms} (default 100 ms)
- *       when state actually changed (delta detected via hash).</li>
- *   <li><b>HEARTBEAT</b> — sent every {@code broadcaster.heartbeat-interval-ms}
- *       (default 30 s) when no state change has occurred.</li>
- * </ul>
- */
 @Component
 public class SimulationBroadcaster {
 
@@ -36,7 +24,6 @@ public class SimulationBroadcaster {
     @Value("${simulation.broadcaster.heartbeat-interval-ms:30000}")
     private long heartbeatIntervalMs;
 
-    /** Hash of the last broadcast payload — used for delta detection. */
     private int  lastStateHash          = 0;
     private long lastBroadcastTimestamp = 0;
 
@@ -48,16 +35,9 @@ public class SimulationBroadcaster {
         this.objectMapper      = objectMapper;
     }
 
-    // ── Scheduled broadcast ───────────────────────────────────────────────
-
-    /**
-     * Runs every 100 ms (fixed rate from application.yml).
-     * Broadcasts STATE_UPDATE if state changed, otherwise sends HEARTBEAT
-     * every 30 seconds to keep connections alive.
-     */
     @Scheduled(fixedRateString = "${simulation.broadcaster.interval-ms:100}")
     public void broadcastState() {
-        if (wsHandler.getConnectionCount() == 0) return;  // fast-path: nobody listening
+        if (wsHandler.getConnectionCount() == 0) return;
 
         try {
             SimulationSnapshot snapshot = simulationService.getState();
@@ -67,13 +47,13 @@ public class SimulationBroadcaster {
             long now    = System.currentTimeMillis();
 
             if (newHash != lastStateHash) {
-                // State changed — send STATE_UPDATE
+
                 wsHandler.broadcast(json);
                 lastStateHash          = newHash;
                 lastBroadcastTimestamp = now;
 
             } else if ((now - lastBroadcastTimestamp) >= heartbeatIntervalMs) {
-                // No change for 30 s — send HEARTBEAT to keep connection alive
+
                 wsHandler.broadcast(buildHeartbeatJson(now));
                 lastBroadcastTimestamp = now;
             }
@@ -86,17 +66,6 @@ public class SimulationBroadcaster {
         }
     }
 
-    // ── Message builders ──────────────────────────────────────────────────
-
-    /**
-     * Sends an EVENT message immediately (not batched) — called by the core
-     * team's simulator after significant events (job queued, completed, etc.).
-     *
-     * <p>Example usage from SimulationServiceImpl or PrinterThread:
-     * <pre>
-     *   broadcaster.publishEvent("COMPLETED", Map.of("jobId", "Job-42", ...));
-     * </pre>
-     */
     public void publishEvent(String eventType, Map<String, Object> eventDetails) {
         try {
             Map<String, Object> envelope = Map.of(
@@ -112,8 +81,6 @@ public class SimulationBroadcaster {
             log.error("Failed to publish event {} to WebSocket", eventType, ex);
         }
     }
-
-    // ── Private helpers ───────────────────────────────────────────────────
 
     private String buildStateUpdateJson(SimulationSnapshot snapshot)
             throws JsonProcessingException {

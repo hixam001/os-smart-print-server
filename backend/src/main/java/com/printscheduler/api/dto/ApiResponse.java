@@ -1,19 +1,5 @@
 package com.printscheduler.api.dto;
 
-/**
- * Generic API envelope for every REST response.
- *
- * <pre>
- * {
- *   "success": true,
- *   "timestamp": 1234567890,
- *   "data": { ... },
- *   "error": null
- * }
- * </pre>
- *
- * @param <T> payload type
- */
 public class ApiResponse<T> {
 
     private final boolean success;
@@ -28,8 +14,6 @@ public class ApiResponse<T> {
         this.error     = error;
     }
 
-    // ── Factory methods ───────────────────────────────────────────────────
-
     public static <T> ApiResponse<T> ok(T data) {
         return new ApiResponse<>(true, data, null);
     }
@@ -38,7 +22,6 @@ public class ApiResponse<T> {
         return new ApiResponse<>(false, null, error);
     }
 
-    // ── Getters ───────────────────────────────────────────────────────────
     public boolean     isSuccess()   { return success; }
     public long        getTimestamp(){ return timestamp; }
     public T           getData()     { return data; }

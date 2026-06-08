@@ -10,9 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 
-/**
- * GET /api/health — liveness probe for the backend service.
- */
 @RestController
 @RequestMapping("/api/health")
 public class HealthController {

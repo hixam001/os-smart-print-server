@@ -3,14 +3,14 @@ import { SimulationAPI } from '../../api/simulationApi';
 import { useSimulationStore } from '../../store/simulationStore';
 
 const DEFAULT_CONFIG = {
-  numUsers:           3,     // 3 users submitting jobs
-  numPrinters:        2,     // 2 physical printers
-  queueCapacity:      15,    // bounded buffer of 15
-  jobIntervalMs:      5000,  // one job every ~5s per user
+  numUsers:           3,
+  numPrinters:        2,
+  queueCapacity:      15,
+  jobIntervalMs:      5000,
   algorithm:          'HYBRID',
   colorJobRatio:      0.4,
   smallJobPercentage: 0.6,
-  simulationSpeed:    2.0,   // 2× = watchable with real print delays
+  simulationSpeed:    2.0,
 };
 
 const ALGO_INFO = {
@@ -92,7 +92,7 @@ export default function SimulationControls() {
 
       <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-        {/* ── Row 1: Main action buttons ── */}
+        {}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {isStopped && (
             <button id="btn-start" className="btn btn-primary" onClick={handleStart} disabled={!!loading}>
@@ -123,7 +123,7 @@ export default function SimulationControls() {
           </button>
         </div>
 
-        {/* ── Row 2: Algorithm selector ── */}
+        {}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
@@ -150,7 +150,7 @@ export default function SimulationControls() {
             )}
           </div>
 
-          {/* Simulation speed */}
+          {}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 180, flex: 1, maxWidth: 240 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
@@ -175,7 +175,7 @@ export default function SimulationControls() {
           </div>
         </div>
 
-        {/* ── Row 3: Advanced config (stopped only) ── */}
+        {}
         {(isStopped && showAdvanced) && (
           <div style={{ animation: 'slideUp 0.25s ease' }}>
             <div className="section-header">Configuration</div>

@@ -1,12 +1,6 @@
 import { useMemo } from 'react';
 import { useSimulationStore } from '../../store/simulationStore';
 
-/* ────────────────────────────────────────────────────────────────────────────
- * JobJourneyPanel
- * Shows every job's lifecycle from submission to completion in a swim-lane
- * view — visualising all the OS concepts in action for each job.
- * ─────────────────────────────────────────────────────────────────────────── */
-
 const STAGE_DEFS = [
   { key: 'SUBMITTED',   label: 'Submitted',   icon: '📝', color: '#6366f1', desc: 'UserThread calls enqueue()' },
   { key: 'QUEUED',      label: 'In Queue',    icon: '📋', color: '#0ea5e9', desc: 'Waiting in bounded buffer' },
@@ -22,7 +16,6 @@ const FAIL_STAGES = {
   CANCELLED: { icon: '⛔', color: '#f97316', label: 'Cancelled', desc: 'Simulation stopped mid-job' },
 };
 
-// Map eventType → job lifecycle stage
 const EVENT_TO_STAGE = {
   JOB_SUBMITTED:   'SUBMITTED',
   JOB_REJECTED:    'REJECTED',
@@ -44,11 +37,10 @@ export default function JobJourneyPanel() {
   const events    = useSimulationStore(s => s.events);
   const status    = useSimulationStore(s => s.status);
 
-  // Build job map from event stream
   const jobs = useMemo(() => {
-    const map = new Map(); // jobId → { jobId, stages[], details }
+    const map = new Map();
 
-    for (const ev of [...events].reverse()) { // oldest first
+    for (const ev of [...events].reverse()) {
       const d   = ev.details ?? {};
       const jid = d.jobId;
       const et  = ev.eventType;
@@ -101,7 +93,6 @@ export default function JobJourneyPanel() {
       }
     }
 
-    // Return most recent 12 jobs, newest first
     return [...map.values()].reverse().slice(0, 12);
   }, [events]);
 
@@ -112,7 +103,7 @@ export default function JobJourneyPanel() {
         <span className="tag tag-accent">{jobs.length} recent jobs</span>
       </div>
 
-      {/* Stage legend */}
+      {}
       <div style={{ display: 'flex', gap: 8, padding: '10px 16px 0', flexWrap: 'wrap' }}>
         {STAGE_DEFS.map(s => (
           <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
@@ -131,7 +122,7 @@ export default function JobJourneyPanel() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 640 }}>
-            {/* Header row */}
+            {}
             <div style={{
               display: 'grid',
               gridTemplateColumns: '80px 60px 50px 40px 1fr 100px',
@@ -181,26 +172,26 @@ function JobRow({ job }) {
       alignItems: 'center',
       animation: 'fadeIn 0.3s ease',
     }}>
-      {/* Job ID */}
+      {}
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--accent)' }}>
         {job.jobId != null ? `#${job.jobId}` : '(rej)'}
       </span>
 
-      {/* User */}
+      {}
       <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
         User-{job.userId ?? '?'}
       </span>
 
-      {/* Pages */}
+      {}
       <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
         {job.pages ?? '?'} pg
         {job.color && <span style={{ marginLeft: 3, fontSize: '0.6rem', color: '#a78bfa' }}>🎨</span>}
       </span>
 
-      {/* Priority */}
+      {}
       <PriorityBubble p={job.priority} />
 
-      {/* Journey pipeline */}
+      {}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {STAGE_DEFS.filter(s => allStages.includes(s.key)).map((s, i, arr) => (
           <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -208,7 +199,7 @@ function JobRow({ job }) {
             {i < arr.length - 1 && <Arrow active={true} />}
           </div>
         ))}
-        {/* Terminal stage */}
+        {}
         {termInfo && (
           <>
             <Arrow active={true} color={termInfo.color} />
@@ -222,7 +213,7 @@ function JobRow({ job }) {
             </div>
           </>
         )}
-        {/* Remaining stages not reached */}
+        {}
         {!isTerminal && STAGE_DEFS.filter(s => !allStages.includes(s.key)).map((s, i) => (
           <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <Arrow active={false} />
@@ -231,7 +222,7 @@ function JobRow({ job }) {
         ))}
       </div>
 
-      {/* Timing */}
+      {}
       <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.5, textAlign: 'right' }}>
         {job.waitMs != null && <div>Wait: <span style={{ color: 'var(--amber-2)' }}>{formatMs(job.waitMs)}</span></div>}
         {job.printMs != null && <div>Total: <span style={{ color: 'var(--emerald-2)' }}>{formatMs(job.printMs)}</span></div>}

@@ -2,10 +2,6 @@ package com.printscheduler.api.dto;
 
 import jakarta.validation.constraints.*;
 
-/**
- * Request body for {@code PUT /api/simulation/configure}.
- * All fields are optional — only non-null values are applied.
- */
 public class ConfigUpdateRequest {
 
     @Pattern(regexp = "FCFS|SJF|HYBRID",
@@ -20,7 +16,6 @@ public class ConfigUpdateRequest {
     @DecimalMax(value = "10.0", message = "simulationSpeed must be between 0.1 and 10.0")
     private Double simulationSpeed;
 
-    // ── Getters / Setters ─────────────────────────────────────────────────
     public String  getAlgorithm()            { return algorithm; }
     public void    setAlgorithm(String v)    { this.algorithm = v; }
 

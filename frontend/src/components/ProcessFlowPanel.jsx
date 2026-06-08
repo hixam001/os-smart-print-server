@@ -1,9 +1,5 @@
 import { useSimulationStore } from '../store/simulationStore';
 
-/**
- * ProcessFlowPanel — animates the full OS pipeline:
- * Users → Queue → Scheduler → Printers → Database
- */
 export default function ProcessFlowPanel() {
   const { status, printers, queueSize, metrics, algorithm } = useSimulationStore();
 
@@ -73,7 +69,7 @@ export default function ProcessFlowPanel() {
         <span className="tag tag-teal">{isRunning ? 'Running' : status}</span>
       </div>
 
-      {/* Flow diagram */}
+      {}
       <div style={{
         padding: '14px 16px',
         display: 'flex',
@@ -83,7 +79,7 @@ export default function ProcessFlowPanel() {
       }}>
         {nodes.map((node, idx) => (
           <div key={node.id} style={{ display: 'flex', alignItems: 'center', flex: idx < nodes.length - 1 ? '1 1 auto' : 'none' }}>
-            {/* Node box */}
+            {}
             <div
               id={`flow-${node.id}`}
               style={{
@@ -95,7 +91,7 @@ export default function ProcessFlowPanel() {
                 flexShrink: 0,
               }}
             >
-              {/* Icon circle */}
+              {}
               <div style={{
                 width: 56, height: 56,
                 borderRadius: 16,
@@ -111,7 +107,7 @@ export default function ProcessFlowPanel() {
                 {node.icon}
               </div>
 
-              {/* Labels */}
+              {}
               <div style={{ textAlign: 'center' }}>
                 <div style={{
                   fontFamily: 'var(--font-head)',
@@ -133,7 +129,7 @@ export default function ProcessFlowPanel() {
               </div>
             </div>
 
-            {/* Arrow connector */}
+            {}
             {idx < nodes.length - 1 && (
               <div style={{
                 flex: 1,
@@ -144,7 +140,7 @@ export default function ProcessFlowPanel() {
                 minWidth: 20,
                 marginBottom: 24,
               }}>
-                {/* Animated flow pulse */}
+                {}
                 {isRunning && (
                   <div style={{
                     position: 'absolute',
@@ -155,7 +151,7 @@ export default function ProcessFlowPanel() {
                     animation: 'flowArrow 1.8s linear infinite',
                   }} />
                 )}
-                {/* Arrowhead */}
+                {}
                 <div style={{
                   position: 'absolute',
                   right: -5, top: '50%',
@@ -172,7 +168,7 @@ export default function ProcessFlowPanel() {
         ))}
       </div>
 
-      {/* Bottom row: sub-details */}
+      {}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(5, 1fr)',

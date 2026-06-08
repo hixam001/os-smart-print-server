@@ -1,6 +1,5 @@
 import { useSimulationStore } from '../../store/simulationStore';
 
-/** OS-problem highlight: shows the bounded-buffer queue visually */
 export default function PrintQueueViz() {
   const {
     queueSize, queueCapacity, totalEnqueued, totalDequeued,
@@ -39,7 +38,7 @@ export default function PrintQueueViz() {
       </div>
 
       <div className="queue-section">
-        {/* Capacity bar with segment markers */}
+        {}
         <div style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
             <span style={{ fontSize: '0.68rem', color: danger ? 'var(--rose-2)' : warn ? 'var(--amber-2)' : 'var(--text-secondary)' }}>
@@ -56,7 +55,7 @@ export default function PrintQueueViz() {
               style={{ width: `${fill}%`, background: fillColor }}
             />
           </div>
-          {/* Segment markers at 25%, 50%, 75% */}
+          {}
           <div style={{ position: 'relative', height: 8, marginTop: -6, marginBottom: 2 }}>
             {[25, 50, 75].map(pct => (
               <div key={pct} style={{
@@ -71,7 +70,7 @@ export default function PrintQueueViz() {
           </div>
         </div>
 
-        {/* Queue stats row */}
+        {}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
           {[
             { label: 'Produced',  val: totalEnqueued, icon: '↓', color: 'var(--teal-2)' },
@@ -97,7 +96,7 @@ export default function PrintQueueViz() {
           ))}
         </div>
 
-        {/* Job chips — horizontal scrollable */}
+        {}
         {queuedJobs.length === 0 ? (
           <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -136,7 +135,7 @@ export default function PrintQueueViz() {
               })}
             </div>
 
-            {/* Legend */}
+            {}
             <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
               {[
                 { dot: 'var(--accent-2)', label: '🎨 Colour' },

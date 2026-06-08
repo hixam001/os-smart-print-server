@@ -1,6 +1,5 @@
 import { useSimulationStore } from '../../store/simulationStore';
 
-/** Shows every printer thread's state as a live Gantt-style row */
 export default function ThreadStatusPanel() {
   const { printers, status, queueSize, algorithm, connected } = useSimulationStore();
   const isRunning = status === 'RUNNING';
@@ -25,20 +24,20 @@ export default function ThreadStatusPanel() {
         </div>
       </div>
 
-      {/* Scheduler thread (synthetic) */}
+      {}
       <div style={{ padding: '10px 16px 0' }}>
         <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
           System Threads
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
-          {/* Scheduler thread */}
+          {}
           <ThreadRow
             name="SchedulerThread"
             state={isRunning ? 'RUNNING' : status}
             detail={`algorithm: ${algorithm}`}
             color="var(--accent-2)"
           />
-          {/* WebSocket broadcaster */}
+          {}
           <ThreadRow
             name="WS Broadcaster"
             state={connected ? 'RUNNING' : 'STOPPED'}
@@ -47,7 +46,7 @@ export default function ThreadStatusPanel() {
           />
         </div>
 
-        {/* Printer (consumer) threads */}
+        {}
         <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
           Printer Threads (Consumers)
         </div>
@@ -71,7 +70,7 @@ export default function ThreadStatusPanel() {
                   borderRadius: 8,
                   transition: 'all 0.3s ease',
                 }}>
-                  {/* Thread name */}
+                  {}
                   <div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: sc.text, fontWeight: 600 }}>
                       {p.name || `Printer-${p.printerId}`}
@@ -83,7 +82,7 @@ export default function ThreadStatusPanel() {
                     </div>
                   </div>
 
-                  {/* Progress bar */}
+                  {}
                   <div style={{ height: 16, background: 'var(--bg-surface)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
                     {p.status === 'BUSY' && (
                       <div style={{
@@ -111,7 +110,7 @@ export default function ThreadStatusPanel() {
                     )}
                   </div>
 
-                  {/* Stats */}
+                  {}
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '0.68rem', fontFamily: 'var(--font-head)', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {p.jobsCompleted}
@@ -124,7 +123,7 @@ export default function ThreadStatusPanel() {
           </div>
         )}
 
-        {/* User (producer) threads hint */}
+        {}
         <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', margin: '12px 0 6px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
           User Threads (Producers)
         </div>
@@ -187,7 +186,7 @@ function ThreadRow({ name, state, detail, color }) {
         <div style={{ fontSize: '0.56rem', color: 'var(--text-muted)', marginTop: 1 }}>{detail}</div>
       </div>
 
-      {/* Indeterminate bar */}
+      {}
       <div style={{ height: 4, background: 'var(--bg-surface)', borderRadius: 2, overflow: 'hidden' }}>
         {isRunning && (
           <div style={{

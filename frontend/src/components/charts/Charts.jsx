@@ -65,7 +65,7 @@ export default function Charts() {
       </div>
       <div style={{ padding: 14, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
 
-        {/* Throughput */}
+        {}
         <ChartCard
           id="chart-throughput"
           title="⚡ Throughput"
@@ -91,7 +91,7 @@ export default function Charts() {
           </AreaChart>
         </ChartCard>
 
-        {/* Queue depth */}
+        {}
         <ChartCard
           id="chart-queue"
           title="📋 Queue Depth"
@@ -123,7 +123,7 @@ export default function Charts() {
           </AreaChart>
         </ChartCard>
 
-        {/* Avg wait time */}
+        {}
         <ChartCard
           id="chart-waittime"
           title="⏱ Avg Wait Time"
@@ -154,7 +154,7 @@ export default function Charts() {
           </LineChart>
         </ChartCard>
 
-        {/* Cumulative rejections */}
+        {}
         <ChartCard
           id="chart-rejected"
           title="⛔ Rejections"

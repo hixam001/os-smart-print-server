@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Relative URL: works in dev (Vite proxy → :8080) and in prod (embedded in Spring Boot at same origin)
 const api = axios.create({ baseURL: '/api/simulation' });
 
 export const SimulationAPI = {

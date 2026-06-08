@@ -1,6 +1,5 @@
 import { useSimulationStore } from '../../store/simulationStore';
 
-/** OS-problem: Counting Semaphore permits visualization */
 export default function SemaphoreWidget() {
   const { queueSize, queueCapacity, printers } = useSimulationStore();
 
@@ -26,7 +25,7 @@ export default function SemaphoreWidget() {
       </div>
 
       <div className="semaphore-widget" style={{ flexDirection: 'column', gap: 10 }}>
-        {/* Big counter */}
+        {}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, width: '100%' }}>
           <span className="sem-count" style={{ color: semColor, fontSize: '2.8rem' }}>
             {permits}
@@ -36,7 +35,7 @@ export default function SemaphoreWidget() {
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>of {queueCapacity} total</span>
           </div>
 
-          {/* Mini gauge */}
+          {}
           <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
             <div style={{ width: 60, height: 60, position: 'relative' }}>
               <svg width="60" height="60" viewBox="0 0 60 60" style={{ transform: 'rotate(-90deg)' }}>
@@ -62,7 +61,7 @@ export default function SemaphoreWidget() {
           </div>
         </div>
 
-        {/* Permit dots grid */}
+        {}
         <div className="sem-permits" style={{ gap: 5 }}>
           {dots.map((active, i) => (
             <div
@@ -73,7 +72,7 @@ export default function SemaphoreWidget() {
           ))}
         </div>
 
-        {/* State explanation */}
+        {}
         <div style={{
           width: '100%', padding: '8px 10px',
           background: 'var(--bg-card)', borderRadius: 8,
