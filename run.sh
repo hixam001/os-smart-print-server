@@ -11,8 +11,8 @@ if [ ! -f "$JAR" ]; then
 fi
 
 echo "🖨️  Starting OS Smart Print Server..."
-echo "   Dashboard → http://localhost:3000"
+echo "   Dashboard → http://localhost:8080"
 echo "   Press Ctrl+C to stop."
 echo ""
-exec java -jar "$JAR" --server.port=3000
+exec java -jar "$JAR" --server.port=8080
 

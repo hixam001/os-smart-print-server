@@ -1,58 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SimulationSnapshot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.model</a> &gt; <span class="el_source">SimulationSnapshot.java</span></div><h1>SimulationSnapshot.java</h1><pre class="source lang-java linenums">package com.printscheduler.model;
 
-/**
- * Lightweight, loosely-typed snapshot of the current simulation state.
- *
- * &lt;p&gt;The {@code details} field is left as {@code Object} intentionally:
- * when the core OS team plugs in their simulator they can return any
- * serialisable object (PrintJob lists, semaphore state, metrics, etc.)
- * and Jackson will serialize it directly — no coupling to this layer.
- */
 public class SimulationSnapshot {
 
-<span class="nc" id="L13">    private SimulationStatus status = SimulationStatus.STOPPED;</span>
-<span class="nc" id="L14">    private long             currentTimeMs = 0;</span>
-<span class="nc" id="L15">    private String           currentScheduler = &quot;HYBRID&quot;;</span>
-<span class="nc" id="L16">    private double           simulationSpeed  = 1.0;</span>
-<span class="nc" id="L17">    private String           message = &quot;&quot;;</span>
+<span class="nc" id="L5">    private SimulationStatus status = SimulationStatus.STOPPED;</span>
+<span class="nc" id="L6">    private long             currentTimeMs = 0;</span>
+<span class="nc" id="L7">    private String           currentScheduler = &quot;HYBRID&quot;;</span>
+<span class="nc" id="L8">    private double           simulationSpeed  = 1.0;</span>
+<span class="nc" id="L9">    private String           message = &quot;&quot;;</span>
 
-    /**
-     * Rich details injected by the core simulator implementation.
-     * Can be any Jackson-serialisable object: Map, SimulationState POJO, etc.
-     */
-<span class="nc" id="L23">    private Object details = null;</span>
+<span class="nc" id="L11">    private Object details = null;</span>
 
-    // ── Constructors ──────────────────────────────────────────────────────
-<span class="nc" id="L26">    public SimulationSnapshot() {}</span>
+<span class="nc" id="L13">    public SimulationSnapshot() {}</span>
 
-    public SimulationSnapshot(SimulationStatus status, long currentTimeMs,
+<span class="nc" id="L15">    public SimulationSnapshot(SimulationStatus status, long currentTimeMs,</span>
                                String currentScheduler, double simulationSpeed,
-<span class="nc" id="L30">                               String message, Object details) {</span>
-<span class="nc" id="L31">        this.status           = status;</span>
-<span class="nc" id="L32">        this.currentTimeMs    = currentTimeMs;</span>
-<span class="nc" id="L33">        this.currentScheduler = currentScheduler;</span>
-<span class="nc" id="L34">        this.simulationSpeed  = simulationSpeed;</span>
-<span class="nc" id="L35">        this.message          = message;</span>
-<span class="nc" id="L36">        this.details          = details;</span>
-<span class="nc" id="L37">    }</span>
+                               String message, Object details) {
+<span class="nc" id="L18">        this.status           = status;</span>
+<span class="nc" id="L19">        this.currentTimeMs    = currentTimeMs;</span>
+<span class="nc" id="L20">        this.currentScheduler = currentScheduler;</span>
+<span class="nc" id="L21">        this.simulationSpeed  = simulationSpeed;</span>
+<span class="nc" id="L22">        this.message          = message;</span>
+<span class="nc" id="L23">        this.details          = details;</span>
+<span class="nc" id="L24">    }</span>
 
-    // ── Getters / Setters ─────────────────────────────────────────────────
-<span class="nc" id="L40">    public SimulationStatus getStatus()            { return status; }</span>
-<span class="nc" id="L41">    public void setStatus(SimulationStatus s)      { this.status = s; }</span>
+<span class="nc" id="L26">    public SimulationStatus getStatus()            { return status; }</span>
+<span class="nc" id="L27">    public void setStatus(SimulationStatus s)      { this.status = s; }</span>
 
-<span class="nc" id="L43">    public long getCurrentTimeMs()                 { return currentTimeMs; }</span>
-<span class="nc" id="L44">    public void setCurrentTimeMs(long t)           { this.currentTimeMs = t; }</span>
+<span class="nc" id="L29">    public long getCurrentTimeMs()                 { return currentTimeMs; }</span>
+<span class="nc" id="L30">    public void setCurrentTimeMs(long t)           { this.currentTimeMs = t; }</span>
 
-<span class="nc" id="L46">    public String getCurrentScheduler()            { return currentScheduler; }</span>
-<span class="nc" id="L47">    public void setCurrentScheduler(String s)      { this.currentScheduler = s; }</span>
+<span class="nc" id="L32">    public String getCurrentScheduler()            { return currentScheduler; }</span>
+<span class="nc" id="L33">    public void setCurrentScheduler(String s)      { this.currentScheduler = s; }</span>
 
-<span class="nc" id="L49">    public double getSimulationSpeed()             { return simulationSpeed; }</span>
-<span class="nc" id="L50">    public void setSimulationSpeed(double d)       { this.simulationSpeed = d; }</span>
+<span class="nc" id="L35">    public double getSimulationSpeed()             { return simulationSpeed; }</span>
+<span class="nc" id="L36">    public void setSimulationSpeed(double d)       { this.simulationSpeed = d; }</span>
 
-<span class="nc" id="L52">    public String getMessage()                     { return message; }</span>
-<span class="nc" id="L53">    public void setMessage(String m)               { this.message = m; }</span>
+<span class="nc" id="L38">    public String getMessage()                     { return message; }</span>
+<span class="nc" id="L39">    public void setMessage(String m)               { this.message = m; }</span>
 
-<span class="nc" id="L55">    public Object getDetails()                     { return details; }</span>
-<span class="nc" id="L56">    public void setDetails(Object d)               { this.details = d; }</span>
+<span class="nc" id="L41">    public Object getDetails()                     { return details; }</span>
+<span class="nc" id="L42">    public void setDetails(Object d)               { this.details = d; }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -2,105 +2,70 @@
 
 import java.util.function.BooleanSupplier;
 
-/**
- * Tracks the logical simulated time, accounting for simulation speed (multiplier) and pauses.
- */
-<span class="nc" id="L8">public class SimulationClock {</span>
-<span class="nc" id="L9">    private long simulatedTimeMs = 0;</span>
-<span class="nc" id="L10">    private long lastRealTimeMs = 0;</span>
-<span class="nc" id="L11">    private double speed = 1.0;</span>
-<span class="nc" id="L12">    private boolean running = false;</span>
+<span class="nc" id="L5">public class SimulationClock {</span>
+<span class="nc" id="L6">    private long simulatedTimeMs = 0;</span>
+<span class="nc" id="L7">    private long lastRealTimeMs = 0;</span>
+<span class="nc" id="L8">    private double speed = 1.0;</span>
+<span class="nc" id="L9">    private boolean running = false;</span>
 
-    /**
-     * Starts the clock tracking.
-     */
     public synchronized void start(double initialSpeed) {
-<span class="nc" id="L18">        this.speed = initialSpeed;</span>
-<span class="nc" id="L19">        this.lastRealTimeMs = System.currentTimeMillis();</span>
-<span class="nc" id="L20">        this.running = true;</span>
-<span class="nc" id="L21">    }</span>
+<span class="nc" id="L12">        this.speed = initialSpeed;</span>
+<span class="nc" id="L13">        this.lastRealTimeMs = System.currentTimeMillis();</span>
+<span class="nc" id="L14">        this.running = true;</span>
+<span class="nc" id="L15">    }</span>
 
-    /**
-     * Pauses the clock tracking.
-     */
     public synchronized void pause() {
-<span class="nc" id="L27">        update();</span>
-<span class="nc" id="L28">        this.running = false;</span>
-<span class="nc" id="L29">    }</span>
+<span class="nc" id="L18">        update();</span>
+<span class="nc" id="L19">        this.running = false;</span>
+<span class="nc" id="L20">    }</span>
 
-    /**
-     * Resumes the clock tracking.
-     */
     public synchronized void resume() {
-<span class="nc" id="L35">        this.lastRealTimeMs = System.currentTimeMillis();</span>
-<span class="nc" id="L36">        this.running = true;</span>
-<span class="nc" id="L37">    }</span>
+<span class="nc" id="L23">        this.lastRealTimeMs = System.currentTimeMillis();</span>
+<span class="nc" id="L24">        this.running = true;</span>
+<span class="nc" id="L25">    }</span>
 
-    /**
-     * Stops the clock tracking.
-     */
     public synchronized void stop() {
-<span class="nc" id="L43">        update();</span>
-<span class="nc" id="L44">        this.running = false;</span>
-<span class="nc" id="L45">    }</span>
+<span class="nc" id="L28">        update();</span>
+<span class="nc" id="L29">        this.running = false;</span>
+<span class="nc" id="L30">    }</span>
 
-    /**
-     * Updates the simulation speed.
-     */
     public synchronized void setSpeed(double newSpeed) {
-<span class="nc" id="L51">        update();</span>
-<span class="nc" id="L52">        this.speed = newSpeed;</span>
-<span class="nc" id="L53">    }</span>
+<span class="nc" id="L33">        update();</span>
+<span class="nc" id="L34">        this.speed = newSpeed;</span>
+<span class="nc" id="L35">    }</span>
 
-    /**
-     * Returns the simulated time elapsed in milliseconds.
-     */
     public synchronized long getSimulatedTimeMs() {
-<span class="nc" id="L59">        update();</span>
-<span class="nc" id="L60">        return simulatedTimeMs;</span>
+<span class="nc" id="L38">        update();</span>
+<span class="nc" id="L39">        return simulatedTimeMs;</span>
     }
 
-    /**
-     * Resets the clock to zero.
-     */
     public synchronized void reset() {
-<span class="nc" id="L67">        simulatedTimeMs = 0;</span>
-<span class="nc" id="L68">        lastRealTimeMs = 0;</span>
-<span class="nc" id="L69">        running = false;</span>
-<span class="nc" id="L70">        speed = 1.0;</span>
-<span class="nc" id="L71">    }</span>
+<span class="nc" id="L43">        simulatedTimeMs = 0;</span>
+<span class="nc" id="L44">        lastRealTimeMs = 0;</span>
+<span class="nc" id="L45">        running = false;</span>
+<span class="nc" id="L46">        speed = 1.0;</span>
+<span class="nc" id="L47">    }</span>
 
-    /**
-     * Updates the internal simulated time based on elapsed real-world time.
-     */
     private void update() {
-<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (running) {</span>
-<span class="nc" id="L78">            long now = System.currentTimeMillis();</span>
-<span class="nc" id="L79">            long deltaReal = now - lastRealTimeMs;</span>
-<span class="nc" id="L80">            simulatedTimeMs += (long) (deltaReal * speed);</span>
-<span class="nc" id="L81">            lastRealTimeMs = now;</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">        if (running) {</span>
+<span class="nc" id="L51">            long now = System.currentTimeMillis();</span>
+<span class="nc" id="L52">            long deltaReal = now - lastRealTimeMs;</span>
+<span class="nc" id="L53">            simulatedTimeMs += (long) (deltaReal * speed);</span>
+<span class="nc" id="L54">            lastRealTimeMs = now;</span>
         }
-<span class="nc" id="L83">    }</span>
+<span class="nc" id="L56">    }</span>
 
-    /**
-     * Sleeps the calling thread for a specified amount of simulated time.
-     * Respects simulation pauses and checks if the simulation is still running.
-     *
-     * @param simulatedMs       how many simulated milliseconds to sleep
-     * @param isRunningSupplier boolean supplier returning false if simulation stopped
-     * @param pauseCoordinator  coordinator to block on if paused
-     */
     public void sleepSimulated(long simulatedMs, BooleanSupplier isRunningSupplier, PauseCoordinator pauseCoordinator)
             throws InterruptedException {
-<span class="nc" id="L95">        long startSimTime = getSimulatedTimeMs();</span>
-<span class="nc bnc" id="L96" title="All 2 branches missed.">        while (getSimulatedTimeMs() - startSimTime &lt; simulatedMs) {</span>
-<span class="nc bnc" id="L97" title="All 2 branches missed.">            if (!isRunningSupplier.getAsBoolean()) {</span>
-<span class="nc" id="L98">                throw new InterruptedException(&quot;Simulation stopped&quot;);</span>
+<span class="nc" id="L60">        long startSimTime = getSimulatedTimeMs();</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">        while (getSimulatedTimeMs() - startSimTime &lt; simulatedMs) {</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">            if (!isRunningSupplier.getAsBoolean()) {</span>
+<span class="nc" id="L63">                throw new InterruptedException(&quot;Simulation stopped&quot;);</span>
             }
-<span class="nc" id="L100">            pauseCoordinator.checkPause();</span>
-            // Sleep for a small real-world interval (20ms) to check flags responsively
-<span class="nc" id="L102">            Thread.sleep(20);</span>
+<span class="nc" id="L65">            pauseCoordinator.checkPause();</span>
+
+<span class="nc" id="L67">            Thread.sleep(20);</span>
         }
-<span class="nc" id="L104">    }</span>
+<span class="nc" id="L69">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

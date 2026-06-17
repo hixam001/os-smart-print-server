@@ -12,22 +12,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * Periodically reads the current simulation state and broadcasts it to all
- * connected WebSocket clients.
- *
- * &lt;h3&gt;Broadcast protocol&lt;/h3&gt;
- * &lt;ul&gt;
- *   &lt;li&gt;&lt;b&gt;STATE_UPDATE&lt;/b&gt; — sent every {@code broadcaster.interval-ms} (default 100 ms)
- *       when state actually changed (delta detected via hash).&lt;/li&gt;
- *   &lt;li&gt;&lt;b&gt;HEARTBEAT&lt;/b&gt; — sent every {@code broadcaster.heartbeat-interval-ms}
- *       (default 30 s) when no state change has occurred.&lt;/li&gt;
- * &lt;/ul&gt;
- */
 @Component
 public class SimulationBroadcaster {
 
-<span class="nc" id="L30">    private static final Logger log = LoggerFactory.getLogger(SimulationBroadcaster.class);</span>
+<span class="nc" id="L18">    private static final Logger log = LoggerFactory.getLogger(SimulationBroadcaster.class);</span>
 
     private final SimulationService          simulationService;
     private final SimulationWebSocketHandler wsHandler;
@@ -36,113 +24,92 @@ public class SimulationBroadcaster {
     @Value(&quot;${simulation.broadcaster.heartbeat-interval-ms:30000}&quot;)
     private long heartbeatIntervalMs;
 
-    /** Hash of the last broadcast payload — used for delta detection. */
-<span class="nc" id="L40">    private int  lastStateHash          = 0;</span>
-<span class="nc" id="L41">    private long lastBroadcastTimestamp = 0;</span>
+<span class="nc" id="L27">    private int  lastStateHash          = 0;</span>
+<span class="nc" id="L28">    private long lastBroadcastTimestamp = 0;</span>
 
-    public SimulationBroadcaster(SimulationService simulationService,
+<span class="nc" id="L30">    public SimulationBroadcaster(SimulationService simulationService,</span>
                                   SimulationWebSocketHandler wsHandler,
-<span class="nc" id="L45">                                  ObjectMapper objectMapper) {</span>
-<span class="nc" id="L46">        this.simulationService = simulationService;</span>
-<span class="nc" id="L47">        this.wsHandler         = wsHandler;</span>
-<span class="nc" id="L48">        this.objectMapper      = objectMapper;</span>
-<span class="nc" id="L49">    }</span>
+                                  ObjectMapper objectMapper) {
+<span class="nc" id="L33">        this.simulationService = simulationService;</span>
+<span class="nc" id="L34">        this.wsHandler         = wsHandler;</span>
+<span class="nc" id="L35">        this.objectMapper      = objectMapper;</span>
+<span class="nc" id="L36">    }</span>
 
-    // ── Scheduled broadcast ───────────────────────────────────────────────
-
-    /**
-     * Runs every 100 ms (fixed rate from application.yml).
-     * Broadcasts STATE_UPDATE if state changed, otherwise sends HEARTBEAT
-     * every 30 seconds to keep connections alive.
-     */
     @Scheduled(fixedRateString = &quot;${simulation.broadcaster.interval-ms:100}&quot;)
     public void broadcastState() {
-<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (wsHandler.getConnectionCount() == 0) return;  // fast-path: nobody listening</span>
+<span class="nc bnc" id="L40" title="All 2 branches missed.">        if (wsHandler.getConnectionCount() == 0) return;</span>
 
         try {
-<span class="nc" id="L63">            SimulationSnapshot snapshot = simulationService.getState();</span>
-<span class="nc" id="L64">            String json = buildStateUpdateJson(snapshot);</span>
+<span class="nc" id="L43">            SimulationSnapshot snapshot = simulationService.getState();</span>
+<span class="nc" id="L44">            String json = buildStateUpdateJson(snapshot);</span>
 
-<span class="nc" id="L66">            int newHash = json.hashCode();</span>
-<span class="nc" id="L67">            long now    = System.currentTimeMillis();</span>
+<span class="nc" id="L46">            int newHash = json.hashCode();</span>
+<span class="nc" id="L47">            long now    = System.currentTimeMillis();</span>
 
-<span class="nc bnc" id="L69" title="All 2 branches missed.">            if (newHash != lastStateHash) {</span>
-                // State changed — send STATE_UPDATE
-<span class="nc" id="L71">                wsHandler.broadcast(json);</span>
-<span class="nc" id="L72">                lastStateHash          = newHash;</span>
-<span class="nc" id="L73">                lastBroadcastTimestamp = now;</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">            if (newHash != lastStateHash) {</span>
 
-<span class="nc bnc" id="L75" title="All 2 branches missed.">            } else if ((now - lastBroadcastTimestamp) &gt;= heartbeatIntervalMs) {</span>
-                // No change for 30 s — send HEARTBEAT to keep connection alive
-<span class="nc" id="L77">                wsHandler.broadcast(buildHeartbeatJson(now));</span>
-<span class="nc" id="L78">                lastBroadcastTimestamp = now;</span>
+<span class="nc" id="L51">                wsHandler.broadcast(json);</span>
+<span class="nc" id="L52">                lastStateHash          = newHash;</span>
+<span class="nc" id="L53">                lastBroadcastTimestamp = now;</span>
+
+<span class="nc bnc" id="L55" title="All 2 branches missed.">            } else if ((now - lastBroadcastTimestamp) &gt;= heartbeatIntervalMs) {</span>
+
+<span class="nc" id="L57">                wsHandler.broadcast(buildHeartbeatJson(now));</span>
+<span class="nc" id="L58">                lastBroadcastTimestamp = now;</span>
             }
 
-<span class="nc" id="L81">        } catch (JsonProcessingException ex) {</span>
-<span class="nc" id="L82">            log.error(&quot;Failed to serialize simulation state for broadcast&quot;, ex);</span>
-<span class="nc" id="L83">            sendErrorToClients(&quot;STATE_SERIALIZATION_ERROR&quot;, ex.getMessage());</span>
-<span class="nc" id="L84">        } catch (Exception ex) {</span>
-<span class="nc" id="L85">            log.error(&quot;Unexpected broadcaster error&quot;, ex);</span>
-<span class="nc" id="L86">        }</span>
-<span class="nc" id="L87">    }</span>
+<span class="nc" id="L61">        } catch (JsonProcessingException ex) {</span>
+<span class="nc" id="L62">            log.error(&quot;Failed to serialize simulation state for broadcast&quot;, ex);</span>
+<span class="nc" id="L63">            sendErrorToClients(&quot;STATE_SERIALIZATION_ERROR&quot;, ex.getMessage());</span>
+<span class="nc" id="L64">        } catch (Exception ex) {</span>
+<span class="nc" id="L65">            log.error(&quot;Unexpected broadcaster error&quot;, ex);</span>
+        }
+<span class="nc" id="L67">    }</span>
 
-    // ── Message builders ──────────────────────────────────────────────────
-
-    /**
-     * Sends an EVENT message immediately (not batched) — called by the core
-     * team's simulator after significant events (job queued, completed, etc.).
-     *
-     * &lt;p&gt;Example usage from SimulationServiceImpl or PrinterThread:
-     * &lt;pre&gt;
-     *   broadcaster.publishEvent(&quot;COMPLETED&quot;, Map.of(&quot;jobId&quot;, &quot;Job-42&quot;, ...));
-     * &lt;/pre&gt;
-     */
     public void publishEvent(String eventType, Map&lt;String, Object&gt; eventDetails) {
         try {
-<span class="nc" id="L102">            Map&lt;String, Object&gt; envelope = Map.of(</span>
-                &quot;type&quot;,      &quot;EVENT&quot;,
-<span class="nc" id="L104">                &quot;timestamp&quot;, System.currentTimeMillis(),</span>
-<span class="nc" id="L105">                &quot;event&quot;,     Map.of(</span>
-                    &quot;eventType&quot;, eventType,
-                    &quot;details&quot;,   eventDetails
+<span class="nc" id="L71">            Map&lt;String, Object&gt; envelope = Map.of(</span>
+<span class="nc" id="L72">                &quot;type&quot;,      &quot;EVENT&quot;,</span>
+<span class="nc" id="L73">                &quot;timestamp&quot;, System.currentTimeMillis(),</span>
+<span class="nc" id="L74">                &quot;event&quot;,     Map.of(</span>
+<span class="nc" id="L75">                    &quot;eventType&quot;, eventType,</span>
+<span class="nc" id="L76">                    &quot;details&quot;,   eventDetails</span>
                 )
             );
-<span class="nc" id="L110">            wsHandler.broadcast(objectMapper.writeValueAsString(envelope));</span>
-<span class="nc" id="L111">        } catch (JsonProcessingException ex) {</span>
-<span class="nc" id="L112">            log.error(&quot;Failed to publish event {} to WebSocket&quot;, eventType, ex);</span>
-<span class="nc" id="L113">        }</span>
-<span class="nc" id="L114">    }</span>
-
-    // ── Private helpers ───────────────────────────────────────────────────
+<span class="nc" id="L79">            wsHandler.broadcast(objectMapper.writeValueAsString(envelope));</span>
+<span class="nc" id="L80">        } catch (JsonProcessingException ex) {</span>
+<span class="nc" id="L81">            log.error(&quot;Failed to publish event {} to WebSocket&quot;, eventType, ex);</span>
+        }
+<span class="nc" id="L83">    }</span>
 
     private String buildStateUpdateJson(SimulationSnapshot snapshot)
             throws JsonProcessingException {
-<span class="nc" id="L120">        Map&lt;String, Object&gt; envelope = Map.of(</span>
-            &quot;type&quot;,      &quot;STATE_UPDATE&quot;,
-<span class="nc" id="L122">            &quot;timestamp&quot;, System.currentTimeMillis(),</span>
-            &quot;data&quot;,      snapshot
+<span class="nc" id="L87">        Map&lt;String, Object&gt; envelope = Map.of(</span>
+<span class="nc" id="L88">            &quot;type&quot;,      &quot;STATE_UPDATE&quot;,</span>
+<span class="nc" id="L89">            &quot;timestamp&quot;, System.currentTimeMillis(),</span>
+<span class="nc" id="L90">            &quot;data&quot;,      snapshot</span>
         );
-<span class="nc" id="L125">        return objectMapper.writeValueAsString(envelope);</span>
+<span class="nc" id="L92">        return objectMapper.writeValueAsString(envelope);</span>
     }
 
     private String buildHeartbeatJson(long now) throws JsonProcessingException {
-<span class="nc" id="L129">        return objectMapper.writeValueAsString(Map.of(</span>
-            &quot;type&quot;,      &quot;HEARTBEAT&quot;,
-<span class="nc" id="L131">            &quot;timestamp&quot;, now</span>
+<span class="nc" id="L96">        return objectMapper.writeValueAsString(Map.of(</span>
+<span class="nc" id="L97">            &quot;type&quot;,      &quot;HEARTBEAT&quot;,</span>
+<span class="nc" id="L98">            &quot;timestamp&quot;, now</span>
         ));
     }
 
     private void sendErrorToClients(String code, String message) {
         try {
-<span class="nc" id="L137">            String json = objectMapper.writeValueAsString(Map.of(</span>
-                &quot;type&quot;,  &quot;ERROR&quot;,
-<span class="nc" id="L139">                &quot;timestamp&quot;, System.currentTimeMillis(),</span>
-<span class="nc" id="L140">                &quot;error&quot;, Map.of(&quot;code&quot;, code, &quot;message&quot;, message)</span>
+<span class="nc" id="L104">            String json = objectMapper.writeValueAsString(Map.of(</span>
+<span class="nc" id="L105">                &quot;type&quot;,  &quot;ERROR&quot;,</span>
+<span class="nc" id="L106">                &quot;timestamp&quot;, System.currentTimeMillis(),</span>
+<span class="nc" id="L107">                &quot;error&quot;, Map.of(&quot;code&quot;, code, &quot;message&quot;, message)</span>
             ));
-<span class="nc" id="L142">            wsHandler.broadcast(json);</span>
-<span class="nc" id="L143">        } catch (JsonProcessingException ex) {</span>
-<span class="nc" id="L144">            log.error(&quot;Could not even serialize the error message&quot;, ex);</span>
-<span class="nc" id="L145">        }</span>
-<span class="nc" id="L146">    }</span>
+<span class="nc" id="L109">            wsHandler.broadcast(json);</span>
+<span class="nc" id="L110">        } catch (JsonProcessingException ex) {</span>
+<span class="nc" id="L111">            log.error(&quot;Could not even serialize the error message&quot;, ex);</span>
+        }
+<span class="nc" id="L113">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

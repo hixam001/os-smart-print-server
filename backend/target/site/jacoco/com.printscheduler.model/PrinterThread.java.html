@@ -4,186 +4,161 @@ import com.printscheduler.service.PrintServerSimulator;
 import java.util.Map;
 import java.util.Random;
 
-/**
- * Consumer thread — represents one physical printer.
- *
- * &lt;h3&gt;OS Concepts demonstrated:&lt;/h3&gt;
- * &lt;ul&gt;
- *   &lt;li&gt;&lt;b&gt;Producer-Consumer&lt;/b&gt;: blocks on {@code semaphore.acquire()} when queue is empty&lt;/li&gt;
- *   &lt;li&gt;&lt;b&gt;Mutual Exclusion&lt;/b&gt;: queue dequeue uses a ReentrantLock (fair=true)&lt;/li&gt;
- *   &lt;li&gt;&lt;b&gt;Real Print Delay&lt;/b&gt;: sleeps {@code MS_PER_PAGE} per page, yielding CPU between pages&lt;/li&gt;
- *   &lt;li&gt;&lt;b&gt;Hardware Failure&lt;/b&gt;: 5 % random paper-jam / hardware error scenario&lt;/li&gt;
- * &lt;/ul&gt;
- */
 public class PrinterThread extends Thread {
 
-    private static final long WARMUP_MS = 500L;  // simulated printer warm-up delay
+    private static final long WARMUP_MS = 500L;
 
     private final Printer printer;
     private final PrintServerSimulator simulator;
-<span class="nc" id="L24">    private final Random random = new Random();</span>
+<span class="nc" id="L13">    private final Random random = new Random();</span>
 
     public PrinterThread(Printer printer, PrintServerSimulator simulator) {
-<span class="nc" id="L27">        super(&quot;Printer-&quot; + printer.getPrinterId());</span>
-<span class="nc" id="L28">        this.printer   = printer;</span>
-<span class="nc" id="L29">        this.simulator = simulator;</span>
-<span class="nc" id="L30">    }</span>
+<span class="nc" id="L16">        super(&quot;Printer-&quot; + printer.getPrinterId());</span>
+<span class="nc" id="L17">        this.printer   = printer;</span>
+<span class="nc" id="L18">        this.simulator = simulator;</span>
+<span class="nc" id="L19">    }</span>
 
     @Override
     public void run() {
         try {
-            // Printer warm-up delay — simulates device ready signal
-<span class="nc" id="L36">            simulator.getClock().sleepSimulated(WARMUP_MS, simulator::isRunning,</span>
-<span class="nc" id="L37">                    simulator.getPauseCoordinator());</span>
 
-<span class="nc bnc" id="L39" title="All 2 branches missed.">            while (simulator.isRunning()) {</span>
-<span class="nc" id="L40">                simulator.getPauseCoordinator().checkPause();</span>
+<span class="nc" id="L25">            simulator.getClock().sleepSimulated(WARMUP_MS, simulator::isRunning,</span>
+<span class="nc" id="L26">                    simulator.getPauseCoordinator());</span>
 
-                // ── SEMAPHORE ACQUIRE ─────────────────────────────────────────
-                // Blocks here when the queue is empty (permits == 0).
-                // This is the core of the Producer-Consumer pattern:
-                // the printer thread waits until a user thread does release().
-<span class="nc" id="L46">                simulator.getJobsAvailableSemaphore().acquire();</span>
+<span class="nc bnc" id="L28" title="All 2 branches missed.">            while (simulator.isRunning()) {</span>
+<span class="nc" id="L29">                simulator.getPauseCoordinator().checkPause();</span>
 
-<span class="nc bnc" id="L48" title="All 2 branches missed.">                if (!simulator.isRunning()) break;</span>
-<span class="nc" id="L49">                simulator.getPauseCoordinator().checkPause();</span>
+<span class="nc" id="L31">                simulator.getJobsAvailableSemaphore().acquire();</span>
 
-                // ── MUTEX (LOCK) — dequeue under ReentrantLock ────────────────
-<span class="nc" id="L52">                long nowMs = simulator.getClock().getSimulatedTimeMs();</span>
-<span class="nc" id="L53">                PrintJob job = simulator.getQueue().dequeue(nowMs);</span>
-<span class="nc bnc" id="L54" title="All 2 branches missed.">                if (job == null) continue;   // spurious wakeup / queue cleared</span>
+<span class="nc bnc" id="L33" title="All 2 branches missed.">                if (!simulator.isRunning()) break;</span>
+<span class="nc" id="L34">                simulator.getPauseCoordinator().checkPause();</span>
 
-                // ── PRINT START ───────────────────────────────────────────────
-<span class="nc" id="L57">                long durationMs = job.estimatedDurationMs(PrintQueue.MS_PER_PAGE);</span>
-<span class="nc" id="L58">                printer.startJob(job, nowMs, durationMs);</span>
+<span class="nc" id="L36">                long nowMs = simulator.getClock().getSimulatedTimeMs();</span>
+<span class="nc" id="L37">                PrintJob job = simulator.getQueue().dequeue(nowMs);</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">                if (job == null) continue;</span>
 
-<span class="nc" id="L60">                simulator.publishEvent(&quot;PRINT_START&quot;, Map.of(</span>
-<span class="nc" id="L61">                    &quot;printerId&quot;,    printer.getPrinterId(),</span>
-<span class="nc" id="L62">                    &quot;printerName&quot;,  printer.getName(),</span>
-<span class="nc" id="L63">                    &quot;jobId&quot;,        job.getJobId(),</span>
-<span class="nc" id="L64">                    &quot;userId&quot;,       job.getUserId(),</span>
-<span class="nc" id="L65">                    &quot;pageCount&quot;,    job.getPageCount(),</span>
-<span class="nc" id="L66">                    &quot;color&quot;,        job.isColor(),</span>
-<span class="nc" id="L67">                    &quot;priority&quot;,     job.getPriority(),</span>
-<span class="nc" id="L68">                    &quot;waitingTimeMs&quot;, Math.max(0, nowMs - job.getSubmittedAt()),</span>
-<span class="nc" id="L69">                    &quot;startedAt&quot;,    nowMs</span>
+<span class="nc" id="L40">                long durationMs = job.estimatedDurationMs(PrintQueue.MS_PER_PAGE);</span>
+<span class="nc" id="L41">                printer.startJob(job, nowMs, durationMs);</span>
+
+<span class="nc" id="L43">                simulator.publishEvent(&quot;PRINT_START&quot;, Map.of(</span>
+<span class="nc" id="L44">                    &quot;printerId&quot;,    printer.getPrinterId(),</span>
+<span class="nc" id="L45">                    &quot;printerName&quot;,  printer.getName(),</span>
+<span class="nc" id="L46">                    &quot;jobId&quot;,        job.getJobId(),</span>
+<span class="nc" id="L47">                    &quot;userId&quot;,       job.getUserId(),</span>
+<span class="nc" id="L48">                    &quot;pageCount&quot;,    job.getPageCount(),</span>
+<span class="nc" id="L49">                    &quot;color&quot;,        job.isColor(),</span>
+<span class="nc" id="L50">                    &quot;priority&quot;,     job.getPriority(),</span>
+<span class="nc" id="L51">                    &quot;waitingTimeMs&quot;, Math.max(0, nowMs - job.getSubmittedAt()),</span>
+<span class="nc" id="L52">                    &quot;startedAt&quot;,    nowMs</span>
                 ));
 
                 try {
-                    // ── COMPUTE / RENDER DELAY ────────────────────────────────
-                    // Real printers spend 2-5s receiving &amp; rendering the document
-                    // (rasterizing fonts, processing images) before page 1 exits.
-<span class="nc" id="L76">                    simulator.publishEvent(&quot;PRINTER_COMPUTING&quot;, Map.of(</span>
-<span class="nc" id="L77">                        &quot;printerId&quot;,   printer.getPrinterId(),</span>
-<span class="nc" id="L78">                        &quot;printerName&quot;, printer.getName(),</span>
-<span class="nc" id="L79">                        &quot;jobId&quot;,       job.getJobId(),</span>
-<span class="nc" id="L80">                        &quot;computeMs&quot;,   PrintQueue.MS_COMPUTE_DELAY</span>
-                    ));
-<span class="nc" id="L82">                    simulator.getClock().sleepSimulated(</span>
-                        PrintQueue.MS_COMPUTE_DELAY,
-<span class="nc" id="L84">                        simulator::isRunning,</span>
-<span class="nc" id="L85">                        simulator.getPauseCoordinator()</span>
-                    );
-                    // ── PAGE-BY-PAGE PRINTING DELAY ───────────────────────────
-                    // Each page takes MS_PER_PAGE simulated ms so the progress
-                    // bar in the UI visually advances page by page.
-<span class="nc" id="L90">                    boolean failed = false;</span>
-<span class="nc bnc" id="L91" title="All 2 branches missed.">                    for (int page = 1; page &lt;= job.getPageCount(); page++) {</span>
-<span class="nc bnc" id="L92" title="All 2 branches missed.">                        if (!simulator.isRunning()) throw new InterruptedException();</span>
-<span class="nc" id="L93">                        simulator.getPauseCoordinator().checkPause();</span>
 
-                        // Simulate printing one page
-<span class="nc" id="L96">                        simulator.getClock().sleepSimulated(</span>
-                            PrintQueue.MS_PER_PAGE,
-<span class="nc" id="L98">                            simulator::isRunning,</span>
-<span class="nc" id="L99">                            simulator.getPauseCoordinator()</span>
+<span class="nc" id="L57">                    simulator.publishEvent(&quot;PRINTER_COMPUTING&quot;, Map.of(</span>
+<span class="nc" id="L58">                        &quot;printerId&quot;,   printer.getPrinterId(),</span>
+<span class="nc" id="L59">                        &quot;printerName&quot;, printer.getName(),</span>
+<span class="nc" id="L60">                        &quot;jobId&quot;,       job.getJobId(),</span>
+<span class="nc" id="L61">                        &quot;computeMs&quot;,   PrintQueue.MS_COMPUTE_DELAY</span>
+                    ));
+<span class="nc" id="L63">                    simulator.getClock().sleepSimulated(</span>
+<span class="nc" id="L64">                        PrintQueue.MS_COMPUTE_DELAY,</span>
+<span class="nc" id="L65">                        simulator::isRunning,</span>
+<span class="nc" id="L66">                        simulator.getPauseCoordinator()</span>
+                    );
+
+<span class="nc" id="L69">                    boolean failed = false;</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">                    for (int page = 1; page &lt;= job.getPageCount(); page++) {</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">                        if (!simulator.isRunning()) throw new InterruptedException();</span>
+<span class="nc" id="L72">                        simulator.getPauseCoordinator().checkPause();</span>
+
+<span class="nc" id="L74">                        simulator.getClock().sleepSimulated(</span>
+<span class="nc" id="L75">                            PrintQueue.MS_PER_PAGE,</span>
+<span class="nc" id="L76">                            simulator::isRunning,</span>
+<span class="nc" id="L77">                            simulator.getPauseCoordinator()</span>
                         );
 
-                        // Brief paper-feed delay between pages (roller advance)
-<span class="nc bnc" id="L103" title="All 2 branches missed.">                        if (page &lt; job.getPageCount()) {</span>
-<span class="nc" id="L104">                            simulator.getClock().sleepSimulated(</span>
-                                300L,
-<span class="nc" id="L106">                                simulator::isRunning,</span>
-<span class="nc" id="L107">                                simulator.getPauseCoordinator()</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">                        if (page &lt; job.getPageCount()) {</span>
+<span class="nc" id="L81">                            simulator.getClock().sleepSimulated(</span>
+<span class="nc" id="L82">                                300L,</span>
+<span class="nc" id="L83">                                simulator::isRunning,</span>
+<span class="nc" id="L84">                                simulator.getPauseCoordinator()</span>
                             );
                         }
 
-                        // 5% chance of hardware error on any page (paper jam, etc.)
-<span class="nc bnc" id="L112" title="All 2 branches missed.">                        if (random.nextDouble() &lt; 0.05) {</span>
-<span class="nc" id="L113">                            long failTime = simulator.getClock().getSimulatedTimeMs();</span>
-<span class="nc" id="L114">                            PrintJob failedJob = printer.failJob(failTime);</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">                        if (random.nextDouble() &lt; 0.05) {</span>
+<span class="nc" id="L89">                            long failTime = simulator.getClock().getSimulatedTimeMs();</span>
+<span class="nc" id="L90">                            PrintJob failedJob = printer.failJob(failTime);</span>
 
-<span class="nc bnc" id="L116" title="All 2 branches missed.">                            if (failedJob != null) {</span>
-<span class="nc" id="L117">                                simulator.getDatabase().record(failedJob);</span>
-<span class="nc" id="L118">                                simulator.publishEvent(&quot;PRINT_FAIL&quot;, Map.of(</span>
-<span class="nc" id="L119">                                    &quot;printerId&quot;,   printer.getPrinterId(),</span>
-<span class="nc" id="L120">                                    &quot;printerName&quot;, printer.getName(),</span>
-<span class="nc" id="L121">                                    &quot;jobId&quot;,       failedJob.getJobId(),</span>
-<span class="nc" id="L122">                                    &quot;pageCount&quot;,   job.getPageCount(),</span>
-<span class="nc" id="L123">                                    &quot;pageFailed&quot;,  page,</span>
-                                    &quot;reason&quot;,      &quot;Hardware error / paper jam on page &quot; + page,
-<span class="nc" id="L125">                                    &quot;failedAt&quot;,    failTime</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">                            if (failedJob != null) {</span>
+<span class="nc" id="L93">                                simulator.getDatabase().record(failedJob);</span>
+<span class="nc" id="L94">                                simulator.publishEvent(&quot;PRINT_FAIL&quot;, Map.of(</span>
+<span class="nc" id="L95">                                    &quot;printerId&quot;,   printer.getPrinterId(),</span>
+<span class="nc" id="L96">                                    &quot;printerName&quot;, printer.getName(),</span>
+<span class="nc" id="L97">                                    &quot;jobId&quot;,       failedJob.getJobId(),</span>
+<span class="nc" id="L98">                                    &quot;pageCount&quot;,   job.getPageCount(),</span>
+<span class="nc" id="L99">                                    &quot;pageFailed&quot;,  page,</span>
+<span class="nc" id="L100">                                    &quot;reason&quot;,      &quot;Hardware error / paper jam on page &quot; + page,</span>
+<span class="nc" id="L101">                                    &quot;failedAt&quot;,    failTime</span>
                                 ));
                             }
 
-                            // Printer repair delay (e.g., clear jam, reset heads)
-<span class="nc" id="L130">                            simulator.publishEvent(&quot;PRINTER_REPAIRING&quot;, Map.of(</span>
-<span class="nc" id="L131">                                &quot;printerId&quot;,   printer.getPrinterId(),</span>
-<span class="nc" id="L132">                                &quot;printerName&quot;, printer.getName(),</span>
-<span class="nc" id="L133">                                &quot;repairMs&quot;,    5000</span>
+<span class="nc" id="L105">                            simulator.publishEvent(&quot;PRINTER_REPAIRING&quot;, Map.of(</span>
+<span class="nc" id="L106">                                &quot;printerId&quot;,   printer.getPrinterId(),</span>
+<span class="nc" id="L107">                                &quot;printerName&quot;, printer.getName(),</span>
+<span class="nc" id="L108">                                &quot;repairMs&quot;,    5000</span>
                             ));
-<span class="nc" id="L135">                            simulator.getClock().sleepSimulated(5000L, simulator::isRunning,</span>
-<span class="nc" id="L136">                                    simulator.getPauseCoordinator());</span>
-<span class="nc" id="L137">                            printer.clearError();</span>
-<span class="nc" id="L138">                            simulator.publishEvent(&quot;PRINTER_RECOVER&quot;, Map.of(</span>
-<span class="nc" id="L139">                                &quot;printerId&quot;,   printer.getPrinterId(),</span>
-<span class="nc" id="L140">                                &quot;printerName&quot;, printer.getName(),</span>
-                                &quot;status&quot;,      &quot;IDLE&quot;
+<span class="nc" id="L110">                            simulator.getClock().sleepSimulated(5000L, simulator::isRunning,</span>
+<span class="nc" id="L111">                                    simulator.getPauseCoordinator());</span>
+<span class="nc" id="L112">                            printer.clearError();</span>
+<span class="nc" id="L113">                            simulator.publishEvent(&quot;PRINTER_RECOVER&quot;, Map.of(</span>
+<span class="nc" id="L114">                                &quot;printerId&quot;,   printer.getPrinterId(),</span>
+<span class="nc" id="L115">                                &quot;printerName&quot;, printer.getName(),</span>
+<span class="nc" id="L116">                                &quot;status&quot;,      &quot;IDLE&quot;</span>
                             ));
-<span class="nc" id="L143">                            failed = true;</span>
-<span class="nc" id="L144">                            break;</span>
+<span class="nc" id="L118">                            failed = true;</span>
+<span class="nc" id="L119">                            break;</span>
                         }
                     }
 
-<span class="nc bnc" id="L148" title="All 2 branches missed.">                    if (!failed) {</span>
-                        // ── JOB COMPLETE ──────────────────────────────────────
-<span class="nc" id="L150">                        long finishTime = simulator.getClock().getSimulatedTimeMs();</span>
-<span class="nc" id="L151">                        PrintJob done = printer.finishJob(finishTime);</span>
-<span class="nc bnc" id="L152" title="All 2 branches missed.">                        if (done != null) {</span>
-<span class="nc" id="L153">                            simulator.getDatabase().record(done);</span>
-<span class="nc" id="L154">                            simulator.publishEvent(&quot;PRINT_COMPLETED&quot;, Map.of(</span>
-<span class="nc" id="L155">                                &quot;printerId&quot;,        printer.getPrinterId(),</span>
-<span class="nc" id="L156">                                &quot;printerName&quot;,      printer.getName(),</span>
-<span class="nc" id="L157">                                &quot;jobId&quot;,            done.getJobId(),</span>
-<span class="nc" id="L158">                                &quot;userId&quot;,           done.getUserId(),</span>
-<span class="nc" id="L159">                                &quot;pageCount&quot;,        done.getPageCount(),</span>
-<span class="nc" id="L160">                                &quot;color&quot;,            done.isColor(),</span>
-<span class="nc" id="L161">                                &quot;priority&quot;,         done.getPriority(),</span>
-<span class="nc" id="L162">                                &quot;waitingTimeMs&quot;,    done.getWaitingTimeMs(),</span>
-<span class="nc" id="L163">                                &quot;turnaroundTimeMs&quot;, done.getTurnaroundTimeMs(),</span>
-<span class="nc" id="L164">                                &quot;completedAt&quot;,      finishTime</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">                    if (!failed) {</span>
+
+<span class="nc" id="L125">                        long finishTime = simulator.getClock().getSimulatedTimeMs();</span>
+<span class="nc" id="L126">                        PrintJob done = printer.finishJob(finishTime);</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">                        if (done != null) {</span>
+<span class="nc" id="L128">                            simulator.getDatabase().record(done);</span>
+<span class="nc" id="L129">                            simulator.publishEvent(&quot;PRINT_COMPLETED&quot;, Map.of(</span>
+<span class="nc" id="L130">                                &quot;printerId&quot;,        printer.getPrinterId(),</span>
+<span class="nc" id="L131">                                &quot;printerName&quot;,      printer.getName(),</span>
+<span class="nc" id="L132">                                &quot;jobId&quot;,            done.getJobId(),</span>
+<span class="nc" id="L133">                                &quot;userId&quot;,           done.getUserId(),</span>
+<span class="nc" id="L134">                                &quot;pageCount&quot;,        done.getPageCount(),</span>
+<span class="nc" id="L135">                                &quot;color&quot;,            done.isColor(),</span>
+<span class="nc" id="L136">                                &quot;priority&quot;,         done.getPriority(),</span>
+<span class="nc" id="L137">                                &quot;waitingTimeMs&quot;,    done.getWaitingTimeMs(),</span>
+<span class="nc" id="L138">                                &quot;turnaroundTimeMs&quot;, done.getTurnaroundTimeMs(),</span>
+<span class="nc" id="L139">                                &quot;completedAt&quot;,      finishTime</span>
                             ));
                         }
                     }
 
-<span class="nc" id="L169">                } catch (InterruptedException e) {</span>
-                    // Simulation stopped mid-job — cancel current job
-<span class="nc" id="L171">                    long stopTime = simulator.getClock().getSimulatedTimeMs();</span>
-<span class="nc" id="L172">                    PrintJob cur = printer.getCurrentJob();</span>
-<span class="nc bnc" id="L173" title="All 2 branches missed.">                    if (cur != null) {</span>
-<span class="nc" id="L174">                        cur.markCancelled(stopTime);</span>
-<span class="nc" id="L175">                        simulator.getDatabase().record(cur);</span>
-<span class="nc" id="L176">                        simulator.publishEvent(&quot;JOB_CANCELLED&quot;, Map.of(</span>
-<span class="nc" id="L177">                            &quot;jobId&quot;,  cur.getJobId(),</span>
-                            &quot;reason&quot;, &quot;Simulation stopped&quot;
+<span class="nc" id="L144">                } catch (InterruptedException e) {</span>
+
+<span class="nc" id="L146">                    long stopTime = simulator.getClock().getSimulatedTimeMs();</span>
+<span class="nc" id="L147">                    PrintJob cur = printer.getCurrentJob();</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">                    if (cur != null) {</span>
+<span class="nc" id="L149">                        cur.markCancelled(stopTime);</span>
+<span class="nc" id="L150">                        simulator.getDatabase().record(cur);</span>
+<span class="nc" id="L151">                        simulator.publishEvent(&quot;JOB_CANCELLED&quot;, Map.of(</span>
+<span class="nc" id="L152">                            &quot;jobId&quot;,  cur.getJobId(),</span>
+<span class="nc" id="L153">                            &quot;reason&quot;, &quot;Simulation stopped&quot;</span>
                         ));
                     }
-<span class="nc" id="L181">                    throw e;</span>
-<span class="nc" id="L182">                }</span>
-<span class="nc" id="L183">            }</span>
-<span class="nc" id="L184">        } catch (InterruptedException e) {</span>
-            // Thread interrupted — exit cleanly
-<span class="nc" id="L186">        }</span>
-<span class="nc" id="L187">    }</span>
+<span class="nc" id="L156">                    throw e;</span>
+                }
+            }
+<span class="nc" id="L159">        } catch (InterruptedException e) {</span>
+
+        }
+<span class="nc" id="L162">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

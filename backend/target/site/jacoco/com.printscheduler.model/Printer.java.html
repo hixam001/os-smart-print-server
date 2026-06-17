@@ -1,170 +1,108 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Printer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Print Server Scheduler</a> &gt; <a href="index.source.html" class="el_package">com.printscheduler.model</a> &gt; <span class="el_source">Printer.java</span></div><h1>Printer.java</h1><pre class="source lang-java linenums">package com.printscheduler.model;
 
-/**
- * Represents one physical printer in the simulation.
- *
- * &lt;h3&gt;Responsibilities&lt;/h3&gt;
- * &lt;ul&gt;
- *   &lt;li&gt;Track whether the printer is IDLE, BUSY, or in ERROR.&lt;/li&gt;
- *   &lt;li&gt;Hold a reference to the {@link PrintJob} currently being processed.&lt;/li&gt;
- *   &lt;li&gt;Accumulate per-printer metrics (jobs completed, total pages, total print time).&lt;/li&gt;
- * &lt;/ul&gt;
- *
- * &lt;h3&gt;Thread-safety&lt;/h3&gt;
- * All mutable fields are {@code volatile}. The simulator's scheduling loop
- * is the only writer; the WebSocket broadcaster only reads.
- */
 public class Printer {
 
-    // ── Identity ──────────────────────────────────────────────────────────
-    private final int    printerId;   // 1-based
-    private final String name;        // e.g. &quot;Printer-1&quot;
+    private final int    printerId;
+    private final String name;
 
-    // ── State ─────────────────────────────────────────────────────────────
-<span class="nc" id="L24">    private volatile PrinterStatus status        = PrinterStatus.IDLE;</span>
-<span class="nc" id="L25">    private volatile PrintJob      currentJob    = null;</span>
-<span class="nc" id="L26">    private volatile long          jobStartTime  = -1;  // sim-time ms</span>
-<span class="nc" id="L27">    private volatile long          jobFinishTime = -1;  // sim-time ms (expected)</span>
+<span class="nc" id="L8">    private volatile PrinterStatus status        = PrinterStatus.IDLE;</span>
+<span class="nc" id="L9">    private volatile PrintJob      currentJob    = null;</span>
+<span class="nc" id="L10">    private volatile long          jobStartTime  = -1;</span>
+<span class="nc" id="L11">    private volatile long          jobFinishTime = -1;</span>
 
-    // ── Metrics ───────────────────────────────────────────────────────────
-<span class="nc" id="L30">    private volatile int  jobsCompleted  = 0;</span>
-<span class="nc" id="L31">    private volatile long totalPages     = 0;</span>
-<span class="nc" id="L32">    private volatile long totalPrintTime = 0;  // ms of active printing</span>
+<span class="nc" id="L13">    private volatile int  jobsCompleted  = 0;</span>
+<span class="nc" id="L14">    private volatile long totalPages     = 0;</span>
+<span class="nc" id="L15">    private volatile long totalPrintTime = 0;</span>
 
-    // ── Constructor ───────────────────────────────────────────────────────
+<span class="nc" id="L17">    public Printer(int printerId) {</span>
+<span class="nc" id="L18">        this.printerId = printerId;</span>
+<span class="nc" id="L19">        this.name      = &quot;Printer-&quot; + printerId;</span>
+<span class="nc" id="L20">    }</span>
 
-    /**
-     * Creates a printer with the given 1-based ID.
-     * Name is auto-generated as &quot;Printer-{id}&quot;.
-     */
-<span class="nc" id="L40">    public Printer(int printerId) {</span>
-<span class="nc" id="L41">        this.printerId = printerId;</span>
-<span class="nc" id="L42">        this.name      = &quot;Printer-&quot; + printerId;</span>
-<span class="nc" id="L43">    }</span>
+<span class="nc" id="L22">    public Printer(int printerId, String name) {</span>
+<span class="nc" id="L23">        this.printerId = printerId;</span>
+<span class="nc" id="L24">        this.name      = name;</span>
+<span class="nc" id="L25">    }</span>
 
-    /** Creates a printer with a custom display name. */
-<span class="nc" id="L46">    public Printer(int printerId, String name) {</span>
-<span class="nc" id="L47">        this.printerId = printerId;</span>
-<span class="nc" id="L48">        this.name      = name;</span>
-<span class="nc" id="L49">    }</span>
-
-    // ── Lifecycle helpers ─────────────────────────────────────────────────
-
-    /**
-     * Starts processing the given job.
-     * The printer must be IDLE; call-site must enforce this.
-     *
-     * @param job          the job to process
-     * @param nowMs        current simulation time
-     * @param durationMs   how long (sim-time) the job will take
-     */
     public void startJob(PrintJob job, long nowMs, long durationMs) {
-<span class="nc" id="L62">        this.currentJob    = job;</span>
-<span class="nc" id="L63">        this.jobStartTime  = nowMs;</span>
-<span class="nc" id="L64">        this.jobFinishTime = nowMs + durationMs;</span>
-<span class="nc" id="L65">        this.status        = PrinterStatus.BUSY;</span>
-<span class="nc" id="L66">        job.markPrinting(this.printerId, nowMs);</span>
-<span class="nc" id="L67">    }</span>
+<span class="nc" id="L28">        this.currentJob    = job;</span>
+<span class="nc" id="L29">        this.jobStartTime  = nowMs;</span>
+<span class="nc" id="L30">        this.jobFinishTime = nowMs + durationMs;</span>
+<span class="nc" id="L31">        this.status        = PrinterStatus.BUSY;</span>
+<span class="nc" id="L32">        job.markPrinting(this.printerId, nowMs);</span>
+<span class="nc" id="L33">    }</span>
 
-    /**
-     * Finishes the current job successfully and returns it.
-     * Printer transitions back to IDLE.
-     *
-     * @param nowMs current simulation time
-     * @return the completed {@link PrintJob}
-     */
     public PrintJob finishJob(long nowMs) {
-<span class="nc" id="L77">        PrintJob finished = this.currentJob;</span>
-<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (finished != null) {</span>
-<span class="nc" id="L79">            finished.markCompleted(nowMs);</span>
-<span class="nc" id="L80">            this.jobsCompleted++;</span>
-<span class="nc" id="L81">            this.totalPages    += finished.getPageCount();</span>
-<span class="nc" id="L82">            this.totalPrintTime += (nowMs - jobStartTime);</span>
+<span class="nc" id="L36">        PrintJob finished = this.currentJob;</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">        if (finished != null) {</span>
+<span class="nc" id="L38">            finished.markCompleted(nowMs);</span>
+<span class="nc" id="L39">            this.jobsCompleted++;</span>
+<span class="nc" id="L40">            this.totalPages    += finished.getPageCount();</span>
+<span class="nc" id="L41">            this.totalPrintTime += (nowMs - jobStartTime);</span>
         }
-<span class="nc" id="L84">        this.currentJob    = null;</span>
-<span class="nc" id="L85">        this.jobStartTime  = -1;</span>
-<span class="nc" id="L86">        this.jobFinishTime = -1;</span>
-<span class="nc" id="L87">        this.status        = PrinterStatus.IDLE;</span>
-<span class="nc" id="L88">        return finished;</span>
+<span class="nc" id="L43">        this.currentJob    = null;</span>
+<span class="nc" id="L44">        this.jobStartTime  = -1;</span>
+<span class="nc" id="L45">        this.jobFinishTime = -1;</span>
+<span class="nc" id="L46">        this.status        = PrinterStatus.IDLE;</span>
+<span class="nc" id="L47">        return finished;</span>
     }
 
-    /**
-     * Fails the current job and transitions the printer to ERROR state.
-     *
-     * @param nowMs current simulation time
-     * @return the failed {@link PrintJob}, or {@code null} if none
-     */
     public PrintJob failJob(long nowMs) {
-<span class="nc" id="L98">        PrintJob failed = this.currentJob;</span>
-<span class="nc bnc" id="L99" title="All 2 branches missed.">        if (failed != null) {</span>
-<span class="nc" id="L100">            failed.markFailed(nowMs);</span>
+<span class="nc" id="L51">        PrintJob failed = this.currentJob;</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        if (failed != null) {</span>
+<span class="nc" id="L53">            failed.markFailed(nowMs);</span>
         }
-<span class="nc" id="L102">        this.currentJob    = null;</span>
-<span class="nc" id="L103">        this.jobStartTime  = -1;</span>
-<span class="nc" id="L104">        this.jobFinishTime = -1;</span>
-<span class="nc" id="L105">        this.status        = PrinterStatus.ERROR;</span>
-<span class="nc" id="L106">        return failed;</span>
+<span class="nc" id="L55">        this.currentJob    = null;</span>
+<span class="nc" id="L56">        this.jobStartTime  = -1;</span>
+<span class="nc" id="L57">        this.jobFinishTime = -1;</span>
+<span class="nc" id="L58">        this.status        = PrinterStatus.ERROR;</span>
+<span class="nc" id="L59">        return failed;</span>
     }
 
-    /** Clears an error and returns the printer to IDLE. */
     public void clearError() {
-<span class="nc" id="L111">        this.status = PrinterStatus.IDLE;</span>
-<span class="nc" id="L112">    }</span>
+<span class="nc" id="L63">        this.status = PrinterStatus.IDLE;</span>
+<span class="nc" id="L64">    }</span>
 
-    /** Takes this printer offline (removed from the simulation pool). */
     public void goOffline() {
-<span class="nc" id="L116">        this.status = PrinterStatus.OFFLINE;</span>
-<span class="nc" id="L117">    }</span>
+<span class="nc" id="L67">        this.status = PrinterStatus.OFFLINE;</span>
+<span class="nc" id="L68">    }</span>
 
-    /**
-     * Returns {@code true} if the current job's expected finish time
-     * has been reached or passed.
-     *
-     * @param nowMs current simulation time
-     */
     public boolean isJobDue(long nowMs) {
-<span class="nc bnc" id="L126" title="All 6 branches missed.">        return status == PrinterStatus.BUSY &amp;&amp; jobFinishTime &gt;= 0 &amp;&amp; nowMs &gt;= jobFinishTime;</span>
+<span class="nc bnc" id="L71" title="All 6 branches missed.">        return status == PrinterStatus.BUSY &amp;&amp; jobFinishTime &gt;= 0 &amp;&amp; nowMs &gt;= jobFinishTime;</span>
     }
 
-    /** Resets all metrics and returns the printer to IDLE (used on simulation reset). */
     public void reset() {
-<span class="nc" id="L131">        this.currentJob    = null;</span>
-<span class="nc" id="L132">        this.jobStartTime  = -1;</span>
-<span class="nc" id="L133">        this.jobFinishTime = -1;</span>
-<span class="nc" id="L134">        this.status        = PrinterStatus.IDLE;</span>
-<span class="nc" id="L135">        this.jobsCompleted = 0;</span>
-<span class="nc" id="L136">        this.totalPages    = 0;</span>
-<span class="nc" id="L137">        this.totalPrintTime = 0;</span>
-<span class="nc" id="L138">    }</span>
+<span class="nc" id="L75">        this.currentJob    = null;</span>
+<span class="nc" id="L76">        this.jobStartTime  = -1;</span>
+<span class="nc" id="L77">        this.jobFinishTime = -1;</span>
+<span class="nc" id="L78">        this.status        = PrinterStatus.IDLE;</span>
+<span class="nc" id="L79">        this.jobsCompleted = 0;</span>
+<span class="nc" id="L80">        this.totalPages    = 0;</span>
+<span class="nc" id="L81">        this.totalPrintTime = 0;</span>
+<span class="nc" id="L82">    }</span>
 
-    // ── Derived metrics ───────────────────────────────────────────────────
-
-    /** Average pages per completed job. Returns 0 if no jobs done yet. */
     public double averagePagesPerJob() {
-<span class="nc bnc" id="L144" title="All 2 branches missed.">        return jobsCompleted == 0 ? 0.0 : (double) totalPages / jobsCompleted;</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        return jobsCompleted == 0 ? 0.0 : (double) totalPages / jobsCompleted;</span>
     }
 
-    /** Average print duration per completed job in ms. Returns 0 if none. */
     public double averagePrintTimeMs() {
-<span class="nc bnc" id="L149" title="All 2 branches missed.">        return jobsCompleted == 0 ? 0.0 : (double) totalPrintTime / jobsCompleted;</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        return jobsCompleted == 0 ? 0.0 : (double) totalPrintTime / jobsCompleted;</span>
     }
 
-    // ── Getters ───────────────────────────────────────────────────────────
-
-<span class="nc" id="L154">    public int           getPrinterId()     { return printerId; }</span>
-<span class="nc" id="L155">    public String        getName()          { return name; }</span>
-<span class="nc" id="L156">    public PrinterStatus getStatus()        { return status; }</span>
-<span class="nc" id="L157">    public PrintJob      getCurrentJob()    { return currentJob; }</span>
-<span class="nc" id="L158">    public long          getJobStartTime()  { return jobStartTime; }</span>
-<span class="nc" id="L159">    public long          getJobFinishTime() { return jobFinishTime; }</span>
-<span class="nc" id="L160">    public int           getJobsCompleted() { return jobsCompleted; }</span>
-<span class="nc" id="L161">    public long          getTotalPages()    { return totalPages; }</span>
-<span class="nc" id="L162">    public long          getTotalPrintTime(){ return totalPrintTime; }</span>
+<span class="nc" id="L92">    public int           getPrinterId()     { return printerId; }</span>
+<span class="nc" id="L93">    public String        getName()          { return name; }</span>
+<span class="nc" id="L94">    public PrinterStatus getStatus()        { return status; }</span>
+<span class="nc" id="L95">    public PrintJob      getCurrentJob()    { return currentJob; }</span>
+<span class="nc" id="L96">    public long          getJobStartTime()  { return jobStartTime; }</span>
+<span class="nc" id="L97">    public long          getJobFinishTime() { return jobFinishTime; }</span>
+<span class="nc" id="L98">    public int           getJobsCompleted() { return jobsCompleted; }</span>
+<span class="nc" id="L99">    public long          getTotalPages()    { return totalPages; }</span>
+<span class="nc" id="L100">    public long          getTotalPrintTime(){ return totalPrintTime; }</span>
 
     @Override
     public String toString() {
-<span class="nc" id="L166">        return String.format(&quot;Printer{id=%d, status=%s, jobsCompleted=%d}&quot;,</span>
-<span class="nc" id="L167">            printerId, status, jobsCompleted);</span>
+<span class="nc" id="L104">        return String.format(&quot;Printer{id=%d, status=%s, jobsCompleted=%d}&quot;,</span>
+<span class="nc" id="L105">            printerId, status, jobsCompleted);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

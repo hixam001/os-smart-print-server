@@ -10,38 +10,35 @@ import org.springframework.web.bind.annotation.RestController;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 
-/**
- * GET /api/health — liveness probe for the backend service.
- */
 @RestController
 @RequestMapping(&quot;/api/health&quot;)
 public class HealthController {
 
     private final SimulationService simulationService;
 
-<span class="nc" id="L22">    public HealthController(SimulationService simulationService) {</span>
-<span class="nc" id="L23">        this.simulationService = simulationService;</span>
-<span class="nc" id="L24">    }</span>
+<span class="nc" id="L19">    public HealthController(SimulationService simulationService) {</span>
+<span class="nc" id="L20">        this.simulationService = simulationService;</span>
+<span class="nc" id="L21">    }</span>
 
     @GetMapping
     public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; health() {
-<span class="nc" id="L28">        long uptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();</span>
+<span class="nc" id="L25">        long uptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();</span>
 
-<span class="nc" id="L30">        Map&lt;String, Object&gt; components = Map.of(</span>
-<span class="nc bnc" id="L31" title="All 2 branches missed.">            &quot;simulator&quot;, simulationService.isRunning() ? &quot;RUNNING&quot;</span>
-<span class="nc bnc" id="L32" title="All 2 branches missed.">                       : simulationService.isPaused()  ? &quot;PAUSED&quot; : &quot;STOPPED&quot;,</span>
-            &quot;websocket&quot;, &quot;UP&quot;,
-            &quot;api&quot;,       &quot;UP&quot;
+<span class="nc" id="L27">        Map&lt;String, Object&gt; components = Map.of(</span>
+<span class="nc bnc" id="L28" title="All 2 branches missed.">            &quot;simulator&quot;, simulationService.isRunning() ? &quot;RUNNING&quot;</span>
+<span class="nc bnc" id="L29" title="All 2 branches missed.">                       : simulationService.isPaused()  ? &quot;PAUSED&quot; : &quot;STOPPED&quot;,</span>
+<span class="nc" id="L30">            &quot;websocket&quot;, &quot;UP&quot;,</span>
+<span class="nc" id="L31">            &quot;api&quot;,       &quot;UP&quot;</span>
         );
 
-<span class="nc" id="L37">        Map&lt;String, Object&gt; data = Map.of(</span>
-            &quot;status&quot;,     &quot;UP&quot;,
-<span class="nc" id="L39">            &quot;timestamp&quot;,  System.currentTimeMillis(),</span>
-<span class="nc" id="L40">            &quot;uptimeMs&quot;,   uptimeMs,</span>
-            &quot;components&quot;, components
+<span class="nc" id="L34">        Map&lt;String, Object&gt; data = Map.of(</span>
+<span class="nc" id="L35">            &quot;status&quot;,     &quot;UP&quot;,</span>
+<span class="nc" id="L36">            &quot;timestamp&quot;,  System.currentTimeMillis(),</span>
+<span class="nc" id="L37">            &quot;uptimeMs&quot;,   uptimeMs,</span>
+<span class="nc" id="L38">            &quot;components&quot;, components</span>
         );
 
-<span class="nc" id="L44">        return ResponseEntity.ok(ApiResponse.ok(data));</span>
+<span class="nc" id="L41">        return ResponseEntity.ok(ApiResponse.ok(data));</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -51,7 +51,7 @@ The project is designed to be easily built into a single, cross-platform executa
 
 ## 📖 Usage Instructions
 
-1. **Launch the Application:** Once you execute the run script, the dashboard will automatically open in your browser at `http://localhost:3000`.
+1. **Launch the Application:** Once you execute the run script, the dashboard will automatically open in your browser at `http://localhost:8080`.
 2. **Configure the OS Parameters:** On the left control panel, you can adjust the system simulation constraints:
    * **Users (Producers):** Number of concurrent threads generating print jobs.
    * **Printers (Consumers):** Number of hardware threads processing pages.

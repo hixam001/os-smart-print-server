@@ -10,53 +10,47 @@ import org.springframework.stereotype.Component;
 import java.awt.Desktop;
 import java.net.URI;
 
-/**
- * Opens the default browser to the dashboard URL when Spring Boot has fully started.
- * Falls back to xdg-open / open on systems without AWT support (Linux headless).
- */
 @Component
 public class BrowserLauncher {
 
-<span class="nc" id="L20">    private static final Logger log = LoggerFactory.getLogger(BrowserLauncher.class);</span>
+<span class="nc" id="L16">    private static final Logger log = LoggerFactory.getLogger(BrowserLauncher.class);</span>
 
     private final Environment env;
 
-<span class="nc" id="L24">    public BrowserLauncher(Environment env) {</span>
-<span class="nc" id="L25">        this.env = env;</span>
-<span class="nc" id="L26">    }</span>
+<span class="nc" id="L20">    public BrowserLauncher(Environment env) {</span>
+<span class="nc" id="L21">        this.env = env;</span>
+<span class="nc" id="L22">    }</span>
 
     @EventListener(ApplicationReadyEvent.class)
     public void openBrowser() {
-<span class="nc" id="L30">        String port = env.getProperty(&quot;server.port&quot;, &quot;8080&quot;);</span>
-<span class="nc" id="L31">        String url  = &quot;http://localhost:&quot; + port;</span>
+<span class="nc" id="L26">        String port = env.getProperty(&quot;server.port&quot;, &quot;8080&quot;);</span>
+<span class="nc" id="L27">        String url  = &quot;http://localhost:&quot; + port;</span>
 
-<span class="nc" id="L33">        log.info(&quot;Dashboard ready → {}&quot;, url);</span>
+<span class="nc" id="L29">        log.info(&quot;Dashboard ready → {}&quot;, url);</span>
 
-        // Try Java AWT Desktop first (works on desktop JDKs with display)
-<span class="nc bnc" id="L36" title="All 4 branches missed.">        if (Desktop.isDesktopSupported() &amp;&amp; Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {</span>
+<span class="nc bnc" id="L31" title="All 4 branches missed.">        if (Desktop.isDesktopSupported() &amp;&amp; Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {</span>
             try {
-<span class="nc" id="L38">                Desktop.getDesktop().browse(new URI(url));</span>
-<span class="nc" id="L39">                return;</span>
-<span class="nc" id="L40">            } catch (Exception e) {</span>
-<span class="nc" id="L41">                log.debug(&quot;AWT Desktop.browse failed: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L33">                Desktop.getDesktop().browse(new URI(url));</span>
+<span class="nc" id="L34">                return;</span>
+<span class="nc" id="L35">            } catch (Exception e) {</span>
+<span class="nc" id="L36">                log.debug(&quot;AWT Desktop.browse failed: {}&quot;, e.getMessage());</span>
             }
         }
 
-        // Fallback: xdg-open (Linux), open (macOS), start (Windows)
-<span class="nc" id="L46">        String os = System.getProperty(&quot;os.name&quot;, &quot;&quot;).toLowerCase();</span>
+<span class="nc" id="L40">        String os = System.getProperty(&quot;os.name&quot;, &quot;&quot;).toLowerCase();</span>
         String[] cmd;
-<span class="nc bnc" id="L48" title="All 2 branches missed.">        if (os.contains(&quot;linux&quot;))   cmd = new String[]{&quot;xdg-open&quot;, url};</span>
-<span class="nc bnc" id="L49" title="All 2 branches missed.">        else if (os.contains(&quot;mac&quot;)) cmd = new String[]{&quot;open&quot;, url};</span>
-<span class="nc" id="L50">        else                         cmd = new String[]{&quot;cmd&quot;, &quot;/c&quot;, &quot;start&quot;, url};</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        if (os.contains(&quot;linux&quot;))   cmd = new String[]{&quot;xdg-open&quot;, url};</span>
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        else if (os.contains(&quot;mac&quot;)) cmd = new String[]{&quot;open&quot;, url};</span>
+<span class="nc" id="L44">        else                         cmd = new String[]{&quot;cmd&quot;, &quot;/c&quot;, &quot;start&quot;, url};</span>
 
         try {
-<span class="nc" id="L53">            new ProcessBuilder(cmd)</span>
-<span class="nc" id="L54">                .redirectErrorStream(true)</span>
-<span class="nc" id="L55">                .start();</span>
-<span class="nc" id="L56">            log.info(&quot;Browser opened via: {}&quot;, String.join(&quot; &quot;, cmd));</span>
-<span class="nc" id="L57">        } catch (Exception e) {</span>
-<span class="nc" id="L58">            log.warn(&quot;Could not open browser automatically. Navigate to: {}&quot;, url);</span>
-<span class="nc" id="L59">        }</span>
-<span class="nc" id="L60">    }</span>
+<span class="nc" id="L47">            new ProcessBuilder(cmd)</span>
+<span class="nc" id="L48">                .redirectErrorStream(true)</span>
+<span class="nc" id="L49">                .start();</span>
+<span class="nc" id="L50">            log.info(&quot;Browser opened via: {}&quot;, String.join(&quot; &quot;, cmd));</span>
+<span class="nc" id="L51">        } catch (Exception e) {</span>
+<span class="nc" id="L52">            log.warn(&quot;Could not open browser automatically. Navigate to: {}&quot;, url);</span>
+        }
+<span class="nc" id="L54">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

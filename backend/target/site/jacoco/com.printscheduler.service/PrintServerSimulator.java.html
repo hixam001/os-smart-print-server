@@ -9,239 +9,201 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-/**
- * Orchestrates the active simulation run, managing threads, synchronization tools, and state snapshots.
- */
 public class PrintServerSimulator {
 
-    /**
-     * Callback interface to publish events to the WebSocket layer without circular dependencies.
-     */
     public interface EventListener {
         void onEvent(String eventType, Map&lt;String, Object&gt; details);
     }
 
     private final SimulationConfig config;
-<span class="nc" id="L25">    private final SimulationClock clock = new SimulationClock();</span>
-<span class="nc" id="L26">    private final PauseCoordinator pauseCoordinator = new PauseCoordinator();</span>
+<span class="nc" id="L19">    private final SimulationClock clock = new SimulationClock();</span>
+<span class="nc" id="L20">    private final PauseCoordinator pauseCoordinator = new PauseCoordinator();</span>
     private final PrintQueue queue;
-<span class="nc" id="L28">    private final Database database = new Database();</span>
-<span class="nc" id="L29">    private final List&lt;Printer&gt; printers = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L30">    private final CountingSemaphore jobsAvailable = new CountingSemaphore(0);</span>
+<span class="nc" id="L22">    private final Database database = new Database();</span>
+<span class="nc" id="L23">    private final List&lt;Printer&gt; printers = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L24">    private final CountingSemaphore jobsAvailable = new CountingSemaphore(0);</span>
     private final EventListener eventListener;
 
-<span class="nc" id="L33">    private final List&lt;UserThread&gt; userThreads = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L34">    private final List&lt;PrinterThread&gt; printerThreads = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L35">    private final AtomicBoolean running = new AtomicBoolean(false);</span>
+<span class="nc" id="L27">    private final List&lt;UserThread&gt; userThreads = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L28">    private final List&lt;PrinterThread&gt; printerThreads = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L29">    private final AtomicBoolean running = new AtomicBoolean(false);</span>
 
-<span class="nc" id="L37">    public PrintServerSimulator(SimulationConfig config, EventListener eventListener) {</span>
-<span class="nc" id="L38">        this.config = config;</span>
-<span class="nc" id="L39">        this.eventListener = eventListener;</span>
-<span class="nc" id="L40">        this.queue = new PrintQueue(config.getQueueCapacity(), config.getAlgorithm());</span>
+<span class="nc" id="L31">    public PrintServerSimulator(SimulationConfig config, EventListener eventListener) {</span>
+<span class="nc" id="L32">        this.config = config;</span>
+<span class="nc" id="L33">        this.eventListener = eventListener;</span>
+<span class="nc" id="L34">        this.queue = new PrintQueue(config.getQueueCapacity(), config.getAlgorithm());</span>
 
-        // Initialize printers
-<span class="nc bnc" id="L43" title="All 2 branches missed.">        for (int i = 1; i &lt;= config.getNumPrinters(); i++) {</span>
-<span class="nc" id="L44">            printers.add(new Printer(i));</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        for (int i = 1; i &lt;= config.getNumPrinters(); i++) {</span>
+<span class="nc" id="L37">            printers.add(new Printer(i));</span>
         }
 
-        // Wire semaphore event listener — broadcasts acquire/release/wait events
-<span class="nc" id="L48">        this.jobsAvailable.setEventListener((type, thread, permits, waiters) -&gt;</span>
-<span class="nc" id="L49">            publishEvent(type, java.util.Map.of(</span>
-                &quot;thread&quot;,  thread,
-<span class="nc" id="L51">                &quot;permits&quot;, permits,</span>
-<span class="nc" id="L52">                &quot;waiters&quot;, waiters</span>
-            ))
+<span class="nc" id="L40">        this.jobsAvailable.setEventListener((type, thread, permits, waiters) -&gt;</span>
+<span class="nc" id="L41">            publishEvent(type, java.util.Map.of(</span>
+<span class="nc" id="L42">                &quot;thread&quot;,  thread,</span>
+<span class="nc" id="L43">                &quot;permits&quot;, permits,</span>
+<span class="nc" id="L44">                &quot;waiters&quot;, waiters</span>
+<span class="nc" id="L45">            ))</span>
         );
-<span class="nc" id="L55">    }</span>
+<span class="nc" id="L47">    }</span>
 
-    /**
-     * Starts the simulator and spawns the User and Printer threads.
-     */
     public synchronized void start() {
-<span class="nc bnc" id="L61" title="All 2 branches missed.">        if (running.getAndSet(true)) {</span>
-<span class="nc" id="L62">            return; // Already running</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">        if (running.getAndSet(true)) {</span>
+<span class="nc" id="L51">            return;</span>
         }
 
-<span class="nc" id="L65">        PrintJob.resetIdSequence();</span>
-<span class="nc" id="L66">        database.reset();</span>
-<span class="nc" id="L67">        queue.resetMetrics();</span>
-<span class="nc" id="L68">        clock.start(config.getSimulationSpeed());</span>
+<span class="nc" id="L54">        PrintJob.resetIdSequence();</span>
+<span class="nc" id="L55">        database.reset();</span>
+<span class="nc" id="L56">        queue.resetMetrics();</span>
+<span class="nc" id="L57">        clock.start(config.getSimulationSpeed());</span>
 
-        // Start printer threads
-<span class="nc bnc" id="L71" title="All 2 branches missed.">        for (Printer printer : printers) {</span>
-<span class="nc" id="L72">            PrinterThread pt = new PrinterThread(printer, this);</span>
-<span class="nc" id="L73">            printerThreads.add(pt);</span>
-<span class="nc" id="L74">            pt.start();</span>
-<span class="nc" id="L75">        }</span>
-
-        // Start user threads
-<span class="nc bnc" id="L78" title="All 2 branches missed.">        for (int i = 1; i &lt;= config.getNumUsers(); i++) {</span>
-<span class="nc" id="L79">            UserThread ut = new UserThread(i, this);</span>
-<span class="nc" id="L80">            userThreads.add(ut);</span>
-<span class="nc" id="L81">            ut.start();</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        for (Printer printer : printers) {</span>
+<span class="nc" id="L60">            PrinterThread pt = new PrinterThread(printer, this);</span>
+<span class="nc" id="L61">            printerThreads.add(pt);</span>
+<span class="nc" id="L62">            pt.start();</span>
         }
-<span class="nc" id="L83">    }</span>
 
-    /**
-     * Pauses the simulator.
-     */
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        for (int i = 1; i &lt;= config.getNumUsers(); i++) {</span>
+<span class="nc" id="L66">            UserThread ut = new UserThread(i, this);</span>
+<span class="nc" id="L67">            userThreads.add(ut);</span>
+<span class="nc" id="L68">            ut.start();</span>
+        }
+<span class="nc" id="L70">    }</span>
+
     public synchronized void pause() {
-<span class="nc bnc" id="L89" title="All 4 branches missed.">        if (running.get() &amp;&amp; !pauseCoordinator.isPaused()) {</span>
-<span class="nc" id="L90">            pauseCoordinator.pause();</span>
-<span class="nc" id="L91">            clock.pause();</span>
+<span class="nc bnc" id="L73" title="All 4 branches missed.">        if (running.get() &amp;&amp; !pauseCoordinator.isPaused()) {</span>
+<span class="nc" id="L74">            pauseCoordinator.pause();</span>
+<span class="nc" id="L75">            clock.pause();</span>
         }
-<span class="nc" id="L93">    }</span>
+<span class="nc" id="L77">    }</span>
 
-    /**
-     * Resumes the simulator.
-     */
     public synchronized void resume() {
-<span class="nc bnc" id="L99" title="All 4 branches missed.">        if (running.get() &amp;&amp; pauseCoordinator.isPaused()) {</span>
-<span class="nc" id="L100">            clock.resume();</span>
-<span class="nc" id="L101">            pauseCoordinator.resume();</span>
+<span class="nc bnc" id="L80" title="All 4 branches missed.">        if (running.get() &amp;&amp; pauseCoordinator.isPaused()) {</span>
+<span class="nc" id="L81">            clock.resume();</span>
+<span class="nc" id="L82">            pauseCoordinator.resume();</span>
         }
-<span class="nc" id="L103">    }</span>
+<span class="nc" id="L84">    }</span>
 
-    /**
-     * Stops the simulator and interrupts all threads to shut down gracefully.
-     */
     public synchronized void stop() {
-<span class="nc bnc" id="L109" title="All 2 branches missed.">        if (!running.getAndSet(false)) {</span>
-<span class="nc" id="L110">            return;</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        if (!running.getAndSet(false)) {</span>
+<span class="nc" id="L88">            return;</span>
         }
 
-        // Interrupt threads to terminate them
-<span class="nc bnc" id="L114" title="All 2 branches missed.">        for (UserThread ut : userThreads) {</span>
-<span class="nc" id="L115">            ut.interrupt();</span>
-<span class="nc" id="L116">        }</span>
-<span class="nc bnc" id="L117" title="All 2 branches missed.">        for (PrinterThread pt : printerThreads) {</span>
-<span class="nc" id="L118">            pt.interrupt();</span>
-<span class="nc" id="L119">        }</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        for (UserThread ut : userThreads) {</span>
+<span class="nc" id="L92">            ut.interrupt();</span>
+        }
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        for (PrinterThread pt : printerThreads) {</span>
+<span class="nc" id="L95">            pt.interrupt();</span>
+        }
 
-<span class="nc" id="L121">        userThreads.clear();</span>
-<span class="nc" id="L122">        printerThreads.clear();</span>
-<span class="nc" id="L123">        clock.stop();</span>
-        
-        // Return printers to IDLE or cancel active jobs
-<span class="nc bnc" id="L126" title="All 2 branches missed.">        for (Printer p : printers) {</span>
-<span class="nc" id="L127">            PrintJob cur = p.getCurrentJob();</span>
-<span class="nc bnc" id="L128" title="All 2 branches missed.">            if (cur != null) {</span>
-<span class="nc" id="L129">                cur.markCancelled(clock.getSimulatedTimeMs());</span>
-<span class="nc" id="L130">                database.record(cur);</span>
+<span class="nc" id="L98">        userThreads.clear();</span>
+<span class="nc" id="L99">        printerThreads.clear();</span>
+<span class="nc" id="L100">        clock.stop();</span>
+
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        for (Printer p : printers) {</span>
+<span class="nc" id="L103">            PrintJob cur = p.getCurrentJob();</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">            if (cur != null) {</span>
+<span class="nc" id="L105">                cur.markCancelled(clock.getSimulatedTimeMs());</span>
+<span class="nc" id="L106">                database.record(cur);</span>
             }
-<span class="nc" id="L132">            p.reset();</span>
-<span class="nc" id="L133">        }</span>
-        
-        // Cancel all remaining jobs in queue
-<span class="nc" id="L136">        queue.clear(clock.getSimulatedTimeMs());</span>
-<span class="nc" id="L137">    }</span>
+<span class="nc" id="L108">            p.reset();</span>
+        }
 
-    /**
-     * Stops and fully resets database, queue and clock.
-     */
+<span class="nc" id="L111">        queue.clear(clock.getSimulatedTimeMs());</span>
+<span class="nc" id="L112">    }</span>
+
     public synchronized void reset() {
-<span class="nc" id="L143">        stop();</span>
-<span class="nc" id="L144">        database.reset();</span>
-<span class="nc" id="L145">        queue.resetMetrics();</span>
-<span class="nc" id="L146">        clock.reset();</span>
-<span class="nc" id="L147">    }</span>
+<span class="nc" id="L115">        stop();</span>
+<span class="nc" id="L116">        database.reset();</span>
+<span class="nc" id="L117">        queue.resetMetrics();</span>
+<span class="nc" id="L118">        clock.reset();</span>
+<span class="nc" id="L119">    }</span>
 
-    /**
-     * Applies configuration updates at runtime.
-     */
     public synchronized void configure(ConfigUpdateRequest request) {
-<span class="nc bnc" id="L153" title="All 2 branches missed.">        if (request.getAlgorithm() != null) {</span>
-<span class="nc" id="L154">            queue.setAlgorithm(request.getAlgorithm());</span>
-<span class="nc" id="L155">            config.setAlgorithm(request.getAlgorithm());</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        if (request.getAlgorithm() != null) {</span>
+<span class="nc" id="L123">            queue.setAlgorithm(request.getAlgorithm());</span>
+<span class="nc" id="L124">            config.setAlgorithm(request.getAlgorithm());</span>
         }
-<span class="nc bnc" id="L157" title="All 2 branches missed.">        if (request.getJobIntervalMs() != null) {</span>
-<span class="nc" id="L158">            config.setJobIntervalMs(request.getJobIntervalMs());</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        if (request.getJobIntervalMs() != null) {</span>
+<span class="nc" id="L127">            config.setJobIntervalMs(request.getJobIntervalMs());</span>
         }
-<span class="nc bnc" id="L160" title="All 2 branches missed.">        if (request.getSimulationSpeed() != null) {</span>
-<span class="nc" id="L161">            double speed = request.getSimulationSpeed();</span>
-<span class="nc" id="L162">            clock.setSpeed(speed);</span>
-<span class="nc" id="L163">            config.setSimulationSpeed(speed);</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">        if (request.getSimulationSpeed() != null) {</span>
+<span class="nc" id="L130">            double speed = request.getSimulationSpeed();</span>
+<span class="nc" id="L131">            clock.setSpeed(speed);</span>
+<span class="nc" id="L132">            config.setSimulationSpeed(speed);</span>
         }
-<span class="nc" id="L165">    }</span>
+<span class="nc" id="L134">    }</span>
 
     public boolean isRunning() {
-<span class="nc" id="L168">        return running.get();</span>
+<span class="nc" id="L137">        return running.get();</span>
     }
 
     public SimulationConfig getConfig() {
-<span class="nc" id="L172">        return config;</span>
+<span class="nc" id="L141">        return config;</span>
     }
 
     public SimulationClock getClock() {
-<span class="nc" id="L176">        return clock;</span>
+<span class="nc" id="L145">        return clock;</span>
     }
 
     public PauseCoordinator getPauseCoordinator() {
-<span class="nc" id="L180">        return pauseCoordinator;</span>
+<span class="nc" id="L149">        return pauseCoordinator;</span>
     }
 
     public PrintQueue getQueue() {
-<span class="nc" id="L184">        return queue;</span>
+<span class="nc" id="L153">        return queue;</span>
     }
 
     public Database getDatabase() {
-<span class="nc" id="L188">        return database;</span>
+<span class="nc" id="L157">        return database;</span>
     }
 
     public List&lt;Printer&gt; getPrinters() {
-<span class="nc" id="L192">        return printers;</span>
+<span class="nc" id="L161">        return printers;</span>
     }
 
     public CountingSemaphore getJobsAvailableSemaphore() {
-<span class="nc" id="L196">        return jobsAvailable;</span>
+<span class="nc" id="L165">        return jobsAvailable;</span>
     }
 
     public void publishEvent(String eventType, Map&lt;String, Object&gt; details) {
-<span class="nc bnc" id="L200" title="All 2 branches missed.">        if (eventListener != null) {</span>
-<span class="nc" id="L201">            eventListener.onEvent(eventType, details);</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">        if (eventListener != null) {</span>
+<span class="nc" id="L170">            eventListener.onEvent(eventType, details);</span>
         }
-<span class="nc" id="L203">    }</span>
+<span class="nc" id="L172">    }</span>
 
-    /**
-     * Builds and returns a snapshot of the current state of the simulation.
-     */
     public SimulationState getSimulationState() {
-<span class="nc" id="L209">        SimulationState state = new SimulationState();</span>
-<span class="nc" id="L210">        long now = clock.getSimulatedTimeMs();</span>
+<span class="nc" id="L175">        SimulationState state = new SimulationState();</span>
+<span class="nc" id="L176">        long now = clock.getSimulatedTimeMs();</span>
 
-<span class="nc bnc" id="L212" title="All 2 branches missed.">        state.setStatus(pauseCoordinator.isPaused() ? SimulationStatus.PAUSED </span>
-<span class="nc bnc" id="L213" title="All 2 branches missed.">                : (running.get() ? SimulationStatus.RUNNING : SimulationStatus.STOPPED));</span>
-<span class="nc" id="L214">        state.setElapsedMs(now);</span>
-<span class="nc" id="L215">        state.setAlgorithm(queue.getAlgorithm());</span>
-<span class="nc" id="L216">        state.setSimulationSpeed(config.getSimulationSpeed());</span>
-<span class="nc" id="L217">        state.setTick((int) (now / 1000));</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        state.setStatus(pauseCoordinator.isPaused() ? SimulationStatus.PAUSED</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">                : (running.get() ? SimulationStatus.RUNNING : SimulationStatus.STOPPED));</span>
+<span class="nc" id="L180">        state.setElapsedMs(now);</span>
+<span class="nc" id="L181">        state.setAlgorithm(queue.getAlgorithm());</span>
+<span class="nc" id="L182">        state.setSimulationSpeed(config.getSimulationSpeed());</span>
+<span class="nc" id="L183">        state.setTick((int) (now / 1000));</span>
 
-<span class="nc" id="L219">        state.setQueueSize(queue.size());</span>
-<span class="nc" id="L220">        state.setQueueCapacity(queue.getCapacity());</span>
-<span class="nc" id="L221">        state.setTotalEnqueued(queue.getTotalEnqueued());</span>
-<span class="nc" id="L222">        state.setTotalDequeued(queue.getTotalDequeued());</span>
-<span class="nc" id="L223">        state.setTotalRejected(queue.getTotalRejected());</span>
+<span class="nc" id="L185">        state.setQueueSize(queue.size());</span>
+<span class="nc" id="L186">        state.setQueueCapacity(queue.getCapacity());</span>
+<span class="nc" id="L187">        state.setTotalEnqueued(queue.getTotalEnqueued());</span>
+<span class="nc" id="L188">        state.setTotalDequeued(queue.getTotalDequeued());</span>
+<span class="nc" id="L189">        state.setTotalRejected(queue.getTotalRejected());</span>
 
-        // Map printers to PrinterInfo
-<span class="nc" id="L226">        List&lt;SimulationState.PrinterInfo&gt; printerInfos = printers.stream()</span>
-<span class="nc" id="L227">                .map(p -&gt; SimulationState.PrinterInfo.from(p, now))</span>
-<span class="nc" id="L228">                .collect(Collectors.toList());</span>
-<span class="nc" id="L229">        state.setPrinters(printerInfos);</span>
+<span class="nc" id="L191">        List&lt;SimulationState.PrinterInfo&gt; printerInfos = printers.stream()</span>
+<span class="nc" id="L192">                .map(p -&gt; SimulationState.PrinterInfo.from(p, now))</span>
+<span class="nc" id="L193">                .collect(Collectors.toList());</span>
+<span class="nc" id="L194">        state.setPrinters(printerInfos);</span>
 
-        // Map queued jobs to JobInfo
-<span class="nc" id="L232">        List&lt;SimulationState.JobInfo&gt; queuedJobInfos = queue.getQueuedJobsSnapshot().stream()</span>
-<span class="nc" id="L233">                .map(SimulationState.JobInfo::from)</span>
-<span class="nc" id="L234">                .collect(Collectors.toList());</span>
-<span class="nc" id="L235">        state.setQueuedJobs(queuedJobInfos);</span>
+<span class="nc" id="L196">        List&lt;SimulationState.JobInfo&gt; queuedJobInfos = queue.getQueuedJobsSnapshot().stream()</span>
+<span class="nc" id="L197">                .map(SimulationState.JobInfo::from)</span>
+<span class="nc" id="L198">                .collect(Collectors.toList());</span>
+<span class="nc" id="L199">        state.setQueuedJobs(queuedJobInfos);</span>
 
-        // Recompute simulation-wide metrics
-<span class="nc" id="L238">        state.setMetrics(database.buildMetrics(now));</span>
+<span class="nc" id="L201">        state.setMetrics(database.buildMetrics(now));</span>
 
-        // Expose semaphore state for the UI semaphore deep-dive panel
-<span class="nc" id="L241">        state.setSemaphorePermits(jobsAvailable.getPermits());</span>
-<span class="nc" id="L242">        state.setSemaphoreWaiters(jobsAvailable.getWaiters());</span>
+<span class="nc" id="L203">        state.setSemaphorePermits(jobsAvailable.getPermits());</span>
+<span class="nc" id="L204">        state.setSemaphoreWaiters(jobsAvailable.getWaiters());</span>
 
-<span class="nc" id="L244">        return state;</span>
+<span class="nc" id="L206">        return state;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

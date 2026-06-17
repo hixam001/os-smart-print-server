@@ -4,83 +4,75 @@ import com.printscheduler.service.PrintServerSimulator;
 import java.util.Map;
 import java.util.Random;
 
-/**
- * Simulates a single user submitting print jobs to the print queue.
- */
 public class UserThread extends Thread {
     private final int userId;
     private final PrintServerSimulator simulator;
-<span class="nc" id="L13">    private final Random random = new Random();</span>
+<span class="nc" id="L10">    private final Random random = new Random();</span>
 
     public UserThread(int userId, PrintServerSimulator simulator) {
-<span class="nc" id="L16">        super(&quot;UserThread-&quot; + userId);</span>
-<span class="nc" id="L17">        this.userId = userId;</span>
-<span class="nc" id="L18">        this.simulator = simulator;</span>
-<span class="nc" id="L19">    }</span>
+<span class="nc" id="L13">        super(&quot;UserThread-&quot; + userId);</span>
+<span class="nc" id="L14">        this.userId = userId;</span>
+<span class="nc" id="L15">        this.simulator = simulator;</span>
+<span class="nc" id="L16">    }</span>
 
     @Override
     public void run() {
         try {
-            // Add a small initial random delay so that all user threads don't submit simultaneously at time 0
-<span class="nc" id="L25">            Thread.sleep(random.nextInt(500) + 100);</span>
 
-<span class="nc bnc" id="L27" title="All 2 branches missed.">            while (simulator.isRunning()) {</span>
-<span class="nc" id="L28">                simulator.getPauseCoordinator().checkPause();</span>
+<span class="nc" id="L22">            Thread.sleep(random.nextInt(500) + 100);</span>
 
-                // Compute sleep time based on configuration and current simulation speed
-<span class="nc" id="L31">                long interval = simulator.getConfig().getJobIntervalMs();</span>
-                // Add jitter to make arrival times realistic (+/- 15% deviation)
-<span class="nc" id="L33">                long jitter = (long) (interval * 0.3 * (random.nextDouble() - 0.5));</span>
-<span class="nc" id="L34">                long sleepTimeMs = Math.max(100, interval + jitter);</span>
+<span class="nc bnc" id="L24" title="All 2 branches missed.">            while (simulator.isRunning()) {</span>
+<span class="nc" id="L25">                simulator.getPauseCoordinator().checkPause();</span>
 
-                // Use the custom simulation clock to sleep in a pause/speed-aware manner
-<span class="nc" id="L37">                simulator.getClock().sleepSimulated(sleepTimeMs, simulator::isRunning, simulator.getPauseCoordinator());</span>
+<span class="nc" id="L27">                long interval = simulator.getConfig().getJobIntervalMs();</span>
 
-                // Generate job properties randomly according to simulation configuration
-<span class="nc bnc" id="L40" title="All 2 branches missed.">                boolean isColor = random.nextDouble() &lt; simulator.getConfig().getColorJobRatio();</span>
-<span class="nc" id="L41">                double smallJobPercentage = simulator.getConfig().getSmallJobPercentage();</span>
-                
+<span class="nc" id="L29">                long jitter = (long) (interval * 0.3 * (random.nextDouble() - 0.5));</span>
+<span class="nc" id="L30">                long sleepTimeMs = Math.max(100, interval + jitter);</span>
+
+<span class="nc" id="L32">                simulator.getClock().sleepSimulated(sleepTimeMs, simulator::isRunning, simulator.getPauseCoordinator());</span>
+
+<span class="nc bnc" id="L34" title="All 2 branches missed.">                boolean isColor = random.nextDouble() &lt; simulator.getConfig().getColorJobRatio();</span>
+<span class="nc" id="L35">                double smallJobPercentage = simulator.getConfig().getSmallJobPercentage();</span>
+
                 int pageCount;
-<span class="nc bnc" id="L44" title="All 2 branches missed.">                if (random.nextDouble() &lt; smallJobPercentage) {</span>
-<span class="nc" id="L45">                    pageCount = random.nextInt(5) + 1; // Small job: 1 to 5 pages</span>
-                } else {
-<span class="nc" id="L47">                    pageCount = random.nextInt(25) + 6; // Large job: 6 to 30 pages</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">                if (random.nextDouble() &lt; smallJobPercentage) {</span>
+<span class="nc" id="L39">                    pageCount = random.nextInt(5) + 1;</span>
+<span class="nc" id="L40">                } else {</span>
+<span class="nc" id="L41">                    pageCount = random.nextInt(25) + 6;</span>
                 }
-                
-<span class="nc" id="L50">                int priority = random.nextInt(5) + 1; // Priority: 1 to 5 (higher is more urgent)</span>
-<span class="nc" id="L51">                long nowMs = simulator.getClock().getSimulatedTimeMs();</span>
 
-<span class="nc" id="L53">                PrintJob job = new PrintJob(userId, pageCount, isColor, priority, nowMs);</span>
+<span class="nc" id="L44">                int priority = random.nextInt(5) + 1;</span>
+<span class="nc" id="L45">                long nowMs = simulator.getClock().getSimulatedTimeMs();</span>
 
-                // Enqueue job into print queue
-<span class="nc" id="L56">                boolean enqueued = simulator.getQueue().enqueue(job);</span>
-<span class="nc bnc" id="L57" title="All 2 branches missed.">                if (enqueued) {</span>
-                    // Release the CountingSemaphore to wake up an idle PrinterThread
-<span class="nc" id="L59">                    simulator.getJobsAvailableSemaphore().release();</span>
+<span class="nc" id="L47">                PrintJob job = new PrintJob(userId, pageCount, isColor, priority, nowMs);</span>
 
-                    // Publish event via WebSocket broadcaster
-<span class="nc" id="L62">                    simulator.publishEvent(&quot;JOB_SUBMITTED&quot;, Map.of(</span>
-<span class="nc" id="L63">                        &quot;jobId&quot;, job.getJobId(),</span>
-<span class="nc" id="L64">                        &quot;userId&quot;, userId,</span>
-<span class="nc" id="L65">                        &quot;pageCount&quot;, pageCount,</span>
-<span class="nc" id="L66">                        &quot;isColor&quot;, isColor,</span>
-<span class="nc" id="L67">                        &quot;priority&quot;, priority,</span>
-<span class="nc" id="L68">                        &quot;submittedAt&quot;, nowMs</span>
+<span class="nc" id="L49">                boolean enqueued = simulator.getQueue().enqueue(job);</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">                if (enqueued) {</span>
+
+<span class="nc" id="L52">                    simulator.getJobsAvailableSemaphore().release();</span>
+
+<span class="nc" id="L54">                    simulator.publishEvent(&quot;JOB_SUBMITTED&quot;, Map.of(</span>
+<span class="nc" id="L55">                        &quot;jobId&quot;, job.getJobId(),</span>
+<span class="nc" id="L56">                        &quot;userId&quot;, userId,</span>
+<span class="nc" id="L57">                        &quot;pageCount&quot;, pageCount,</span>
+<span class="nc" id="L58">                        &quot;isColor&quot;, isColor,</span>
+<span class="nc" id="L59">                        &quot;priority&quot;, priority,</span>
+<span class="nc" id="L60">                        &quot;submittedAt&quot;, nowMs</span>
                     ));
-                } else {
-                    // Log queue rejection event (queue capacity exceeded)
-<span class="nc" id="L72">                    simulator.publishEvent(&quot;JOB_REJECTED&quot;, Map.of(</span>
-<span class="nc" id="L73">                        &quot;userId&quot;, userId,</span>
-<span class="nc" id="L74">                        &quot;pageCount&quot;, pageCount,</span>
-<span class="nc" id="L75">                        &quot;isColor&quot;, isColor,</span>
-<span class="nc" id="L76">                        &quot;priority&quot;, priority,</span>
-<span class="nc" id="L77">                        &quot;rejectedAt&quot;, nowMs</span>
+<span class="nc" id="L62">                } else {</span>
+
+<span class="nc" id="L64">                    simulator.publishEvent(&quot;JOB_REJECTED&quot;, Map.of(</span>
+<span class="nc" id="L65">                        &quot;userId&quot;, userId,</span>
+<span class="nc" id="L66">                        &quot;pageCount&quot;, pageCount,</span>
+<span class="nc" id="L67">                        &quot;isColor&quot;, isColor,</span>
+<span class="nc" id="L68">                        &quot;priority&quot;, priority,</span>
+<span class="nc" id="L69">                        &quot;rejectedAt&quot;, nowMs</span>
                     ));
                 }
-<span class="nc" id="L80">            }</span>
-<span class="nc" id="L81">        } catch (InterruptedException e) {</span>
-            // Exit thread cleanly when interrupted by stop()
-<span class="nc" id="L83">        }</span>
-<span class="nc" id="L84">    }</span>
+            }
+<span class="nc" id="L73">        } catch (InterruptedException e) {</span>
+
+        }
+<span class="nc" id="L76">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -9,209 +9,138 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
-/**
- * In-memory job history store and metrics aggregator.
- *
- * &lt;p&gt;The {@code Database} accumulates every {@link PrintJob} whose lifecycle
- * has ended (COMPLETED, FAILED, or CANCELLED) so that:
- * &lt;ul&gt;
- *   &lt;li&gt;The REST export endpoint can stream all historical records.&lt;/li&gt;
- *   &lt;li&gt;The {@code SimulationState.Metrics} block can be recomputed cheaply.&lt;/li&gt;
- *   &lt;li&gt;Per-user and per-printer breakdowns are available on demand.&lt;/li&gt;
- * &lt;/ul&gt;
- *
- * &lt;h3&gt;Thread-safety&lt;/h3&gt;
- * The internal store uses a {@link CopyOnWriteArrayList}: writes (job
- * completions) are infrequent, reads (snapshot, export) are frequent.
- * Per-user index uses a {@link ConcurrentHashMap}.
- *
- * &lt;h3&gt;Lifecycle&lt;/h3&gt;
- * &lt;ol&gt;
- *   &lt;li&gt;Call {@link #record(PrintJob)} when a job reaches a terminal state.&lt;/li&gt;
- *   &lt;li&gt;Call {@link #buildMetrics(long)} to get a fresh {@link SimulationState.Metrics}.&lt;/li&gt;
- *   &lt;li&gt;Call {@link #reset()} when the simulation resets.&lt;/li&gt;
- * &lt;/ol&gt;
- */
-<span class="nc" id="L35">public class Database {</span>
+<span class="nc" id="L12">public class Database {</span>
 
-    // ── Storage ───────────────────────────────────────────────────────────
+<span class="nc" id="L14">    private final CopyOnWriteArrayList&lt;PrintJob&gt; allJobs = new CopyOnWriteArrayList&lt;&gt;();</span>
 
-    /** All terminal jobs in insertion order. Thread-safe for concurrent reads. */
-<span class="nc" id="L40">    private final CopyOnWriteArrayList&lt;PrintJob&gt; allJobs = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L16">    private final ConcurrentHashMap&lt;Integer, CopyOnWriteArrayList&lt;PrintJob&gt;&gt; byUser =</span>
+<span class="nc" id="L17">        new ConcurrentHashMap&lt;&gt;();</span>
 
-    /**
-     * Per-user index for user-breakdown queries.
-     * Key = userId, Value = list of that user's terminal jobs.
-     */
-<span class="nc" id="L46">    private final ConcurrentHashMap&lt;Integer, CopyOnWriteArrayList&lt;PrintJob&gt;&gt; byUser =</span>
-        new ConcurrentHashMap&lt;&gt;();
-
-    // ── Write API ─────────────────────────────────────────────────────────
-
-    /**
-     * Records a job that has reached a terminal state.
-     * Jobs in QUEUED or PRINTING state are silently ignored.
-     *
-     * @param job the finished, failed, or cancelled job
-     */
     public void record(PrintJob job) {
-<span class="nc bnc" id="L58" title="All 2 branches missed.">        if (job == null) return;</span>
-<span class="nc" id="L59">        JobStatus s = job.getStatus();</span>
-<span class="nc bnc" id="L60" title="All 6 branches missed.">        if (s != JobStatus.COMPLETED &amp;&amp; s != JobStatus.FAILED &amp;&amp; s != JobStatus.CANCELLED) {</span>
-<span class="nc" id="L61">            return;  // only terminal states</span>
+<span class="nc bnc" id="L20" title="All 2 branches missed.">        if (job == null) return;</span>
+<span class="nc" id="L21">        JobStatus s = job.getStatus();</span>
+<span class="nc bnc" id="L22" title="All 6 branches missed.">        if (s != JobStatus.COMPLETED &amp;&amp; s != JobStatus.FAILED &amp;&amp; s != JobStatus.CANCELLED) {</span>
+<span class="nc" id="L23">            return;</span>
         }
-<span class="nc" id="L63">        allJobs.add(job);</span>
-<span class="nc" id="L64">        byUser.computeIfAbsent(job.getUserId(), id -&gt; new CopyOnWriteArrayList&lt;&gt;())</span>
-<span class="nc" id="L65">              .add(job);</span>
-<span class="nc" id="L66">    }</span>
+<span class="nc" id="L25">        allJobs.add(job);</span>
+<span class="nc" id="L26">        byUser.computeIfAbsent(job.getUserId(), id -&gt; new CopyOnWriteArrayList&lt;&gt;())</span>
+<span class="nc" id="L27">              .add(job);</span>
+<span class="nc" id="L28">    }</span>
 
-    // ── Reset ─────────────────────────────────────────────────────────────
-
-    /** Clears all stored jobs. Call this during a simulation reset. */
     public void reset() {
-<span class="nc" id="L72">        allJobs.clear();</span>
-<span class="nc" id="L73">        byUser.clear();</span>
-<span class="nc" id="L74">    }</span>
+<span class="nc" id="L31">        allJobs.clear();</span>
+<span class="nc" id="L32">        byUser.clear();</span>
+<span class="nc" id="L33">    }</span>
 
-    // ── Read API ──────────────────────────────────────────────────────────
-
-    /**
-     * Returns an unmodifiable view of all terminal jobs (insertion order).
-     * Safe for streaming to the export endpoint.
-     */
     public List&lt;PrintJob&gt; getAllJobs() {
-<span class="nc" id="L83">        return Collections.unmodifiableList(new ArrayList&lt;&gt;(allJobs));</span>
+<span class="nc" id="L36">        return Collections.unmodifiableList(new ArrayList&lt;&gt;(allJobs));</span>
     }
 
-    /**
-     * Returns all terminal jobs for the given user, or an empty list if none.
-     */
     public List&lt;PrintJob&gt; getJobsByUser(int userId) {
-<span class="nc" id="L90">        CopyOnWriteArrayList&lt;PrintJob&gt; userJobs = byUser.get(userId);</span>
-<span class="nc bnc" id="L91" title="All 2 branches missed.">        return userJobs == null</span>
-<span class="nc" id="L92">            ? Collections.emptyList()</span>
-<span class="nc" id="L93">            : Collections.unmodifiableList(new ArrayList&lt;&gt;(userJobs));</span>
+<span class="nc" id="L40">        CopyOnWriteArrayList&lt;PrintJob&gt; userJobs = byUser.get(userId);</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">        return userJobs == null</span>
+<span class="nc" id="L42">            ? Collections.emptyList()</span>
+<span class="nc" id="L43">            : Collections.unmodifiableList(new ArrayList&lt;&gt;(userJobs));</span>
     }
 
-    /** Returns only completed (COMPLETED status) jobs. */
     public List&lt;PrintJob&gt; getCompletedJobs() {
-<span class="nc" id="L98">        return allJobs.stream()</span>
-<span class="nc bnc" id="L99" title="All 2 branches missed.">                      .filter(j -&gt; j.getStatus() == JobStatus.COMPLETED)</span>
-<span class="nc" id="L100">                      .collect(Collectors.toList());</span>
+<span class="nc" id="L47">        return allJobs.stream()</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">                      .filter(j -&gt; j.getStatus() == JobStatus.COMPLETED)</span>
+<span class="nc" id="L49">                      .collect(Collectors.toList());</span>
     }
 
-    /** Returns only failed (FAILED status) jobs. */
     public List&lt;PrintJob&gt; getFailedJobs() {
-<span class="nc" id="L105">        return allJobs.stream()</span>
-<span class="nc bnc" id="L106" title="All 2 branches missed.">                      .filter(j -&gt; j.getStatus() == JobStatus.FAILED)</span>
-<span class="nc" id="L107">                      .collect(Collectors.toList());</span>
+<span class="nc" id="L53">        return allJobs.stream()</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">                      .filter(j -&gt; j.getStatus() == JobStatus.FAILED)</span>
+<span class="nc" id="L55">                      .collect(Collectors.toList());</span>
     }
 
-    /** Returns only cancelled jobs. */
     public List&lt;PrintJob&gt; getCancelledJobs() {
-<span class="nc" id="L112">        return allJobs.stream()</span>
-<span class="nc bnc" id="L113" title="All 2 branches missed.">                      .filter(j -&gt; j.getStatus() == JobStatus.CANCELLED)</span>
-<span class="nc" id="L114">                      .collect(Collectors.toList());</span>
+<span class="nc" id="L59">        return allJobs.stream()</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">                      .filter(j -&gt; j.getStatus() == JobStatus.CANCELLED)</span>
+<span class="nc" id="L61">                      .collect(Collectors.toList());</span>
     }
 
-    /** Total number of stored terminal jobs. */
     public int totalJobCount() {
-<span class="nc" id="L119">        return allJobs.size();</span>
+<span class="nc" id="L65">        return allJobs.size();</span>
     }
 
-    // ── Metrics computation ───────────────────────────────────────────────
-
-    /**
-     * Computes a fresh {@link SimulationState.Metrics} from all stored jobs.
-     *
-     * @param elapsedMs total simulation run time so far (for throughput calc)
-     * @return up-to-date metrics snapshot; never {@code null}
-     */
     public SimulationState.Metrics buildMetrics(long elapsedMs) {
-<span class="nc" id="L131">        SimulationState.Metrics m = new SimulationState.Metrics();</span>
+<span class="nc" id="L69">        SimulationState.Metrics m = new SimulationState.Metrics();</span>
 
-<span class="nc" id="L133">        List&lt;PrintJob&gt; completed = getCompletedJobs();</span>
-<span class="nc" id="L134">        List&lt;PrintJob&gt; failed    = getFailedJobs();</span>
-<span class="nc" id="L135">        List&lt;PrintJob&gt; cancelled = getCancelledJobs();</span>
+<span class="nc" id="L71">        List&lt;PrintJob&gt; completed = getCompletedJobs();</span>
+<span class="nc" id="L72">        List&lt;PrintJob&gt; failed    = getFailedJobs();</span>
+<span class="nc" id="L73">        List&lt;PrintJob&gt; cancelled = getCancelledJobs();</span>
 
-<span class="nc" id="L137">        m.setTotalJobsCompleted(completed.size());</span>
-<span class="nc" id="L138">        m.setTotalJobsFailed(failed.size());</span>
-<span class="nc" id="L139">        m.setTotalJobsCancelled(cancelled.size());</span>
+<span class="nc" id="L75">        m.setTotalJobsCompleted(completed.size());</span>
+<span class="nc" id="L76">        m.setTotalJobsFailed(failed.size());</span>
+<span class="nc" id="L77">        m.setTotalJobsCancelled(cancelled.size());</span>
 
-<span class="nc bnc" id="L141" title="All 2 branches missed.">        if (!completed.isEmpty()) {</span>
-<span class="nc" id="L142">            OptionalDouble avgWait = completed.stream()</span>
-<span class="nc" id="L143">                .mapToLong(PrintJob::getWaitingTimeMs)</span>
-<span class="nc bnc" id="L144" title="All 2 branches missed.">                .filter(v -&gt; v &gt;= 0)</span>
-<span class="nc" id="L145">                .average();</span>
-<span class="nc" id="L146">            m.setAvgWaitingTimeMs(avgWait.orElse(0.0));</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (!completed.isEmpty()) {</span>
+<span class="nc" id="L80">            OptionalDouble avgWait = completed.stream()</span>
+<span class="nc" id="L81">                .mapToLong(PrintJob::getWaitingTimeMs)</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">                .filter(v -&gt; v &gt;= 0)</span>
+<span class="nc" id="L83">                .average();</span>
+<span class="nc" id="L84">            m.setAvgWaitingTimeMs(avgWait.orElse(0.0));</span>
 
-<span class="nc" id="L148">            OptionalDouble avgTat = completed.stream()</span>
-<span class="nc" id="L149">                .mapToLong(PrintJob::getTurnaroundTimeMs)</span>
-<span class="nc bnc" id="L150" title="All 2 branches missed.">                .filter(v -&gt; v &gt;= 0)</span>
-<span class="nc" id="L151">                .average();</span>
-<span class="nc" id="L152">            m.setAvgTurnaroundTimeMs(avgTat.orElse(0.0));</span>
+<span class="nc" id="L86">            OptionalDouble avgTat = completed.stream()</span>
+<span class="nc" id="L87">                .mapToLong(PrintJob::getTurnaroundTimeMs)</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">                .filter(v -&gt; v &gt;= 0)</span>
+<span class="nc" id="L89">                .average();</span>
+<span class="nc" id="L90">            m.setAvgTurnaroundTimeMs(avgTat.orElse(0.0));</span>
 
-<span class="nc" id="L154">            OptionalDouble avgPages = completed.stream()</span>
-<span class="nc" id="L155">                .mapToInt(PrintJob::getPageCount)</span>
-<span class="nc" id="L156">                .average();</span>
-<span class="nc" id="L157">            m.setAvgPageCount(avgPages.orElse(0.0));</span>
+<span class="nc" id="L92">            OptionalDouble avgPages = completed.stream()</span>
+<span class="nc" id="L93">                .mapToInt(PrintJob::getPageCount)</span>
+<span class="nc" id="L94">                .average();</span>
+<span class="nc" id="L95">            m.setAvgPageCount(avgPages.orElse(0.0));</span>
 
-<span class="nc" id="L159">            long colorCount = completed.stream().filter(PrintJob::isColor).count();</span>
-<span class="nc bnc" id="L160" title="All 2 branches missed.">            m.setColorJobRatio(completed.isEmpty() ? 0.0</span>
-<span class="nc" id="L161">                : (double) colorCount / completed.size());</span>
+<span class="nc" id="L97">            long colorCount = completed.stream().filter(PrintJob::isColor).count();</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            m.setColorJobRatio(completed.isEmpty() ? 0.0</span>
+<span class="nc" id="L99">                : (double) colorCount / completed.size());</span>
 
-            // Throughput: jobs per simulated minute
-<span class="nc" id="L164">            long elapsedMin = elapsedMs / 60_000;</span>
-<span class="nc bnc" id="L165" title="All 2 branches missed.">            m.setThroughputJobsPerMin(elapsedMin &gt; 0</span>
-<span class="nc" id="L166">                ? completed.size() / elapsedMin</span>
-<span class="nc" id="L167">                : completed.size());   // less than one minute: raw count</span>
+<span class="nc" id="L101">            long elapsedMin = elapsedMs / 60_000;</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">            m.setThroughputJobsPerMin(elapsedMin &gt; 0</span>
+<span class="nc" id="L103">                ? completed.size() / elapsedMin</span>
+<span class="nc" id="L104">                : completed.size());</span>
         }
 
-<span class="nc" id="L170">        return m;</span>
+<span class="nc" id="L107">        return m;</span>
     }
 
-    /**
-     * Returns a per-user breakdown map.
-     * Key = userId, Value = count of that user's completed jobs.
-     */
     public Map&lt;Integer, Long&gt; completedJobsPerUser() {
-<span class="nc" id="L178">        return byUser.entrySet().stream()</span>
-<span class="nc" id="L179">            .collect(Collectors.toMap(</span>
-                Map.Entry::getKey,
-<span class="nc" id="L181">                e -&gt; e.getValue().stream()</span>
-<span class="nc bnc" id="L182" title="All 2 branches missed.">                      .filter(j -&gt; j.getStatus() == JobStatus.COMPLETED)</span>
-<span class="nc" id="L183">                      .count()</span>
+<span class="nc" id="L111">        return byUser.entrySet().stream()</span>
+<span class="nc" id="L112">            .collect(Collectors.toMap(</span>
+<span class="nc" id="L113">                Map.Entry::getKey,</span>
+<span class="nc" id="L114">                e -&gt; e.getValue().stream()</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">                      .filter(j -&gt; j.getStatus() == JobStatus.COMPLETED)</span>
+<span class="nc" id="L116">                      .count()</span>
             ));
     }
 
-    /**
-     * Generates a CSV string of all completed jobs.
-     * Suitable for the {@code /api/simulation/export?format=csv&amp;type=jobs} endpoint.
-     */
     public String toCsv() {
-<span class="nc" id="L192">        StringBuilder sb = new StringBuilder();</span>
-<span class="nc" id="L193">        sb.append(&quot;jobId,userId,pageCount,color,priority,status,&quot;)</span>
-<span class="nc" id="L194">          .append(&quot;submittedAt,waitingTimeMs,turnaroundTimeMs\n&quot;);</span>
+<span class="nc" id="L121">        StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L122">        sb.append(&quot;jobId,userId,pageCount,color,priority,status,&quot;)</span>
+<span class="nc" id="L123">          .append(&quot;submittedAt,waitingTimeMs,turnaroundTimeMs\n&quot;);</span>
 
-<span class="nc bnc" id="L196" title="All 2 branches missed.">        for (PrintJob j : allJobs) {</span>
-<span class="nc" id="L197">            sb.append(j.getJobId()).append(',')</span>
-<span class="nc" id="L198">              .append(j.getUserId()).append(',')</span>
-<span class="nc" id="L199">              .append(j.getPageCount()).append(',')</span>
-<span class="nc" id="L200">              .append(j.isColor()).append(',')</span>
-<span class="nc" id="L201">              .append(j.getPriority()).append(',')</span>
-<span class="nc" id="L202">              .append(j.getStatus().name()).append(',')</span>
-<span class="nc" id="L203">              .append(j.getSubmittedAt()).append(',')</span>
-<span class="nc" id="L204">              .append(j.getWaitingTimeMs()).append(',')</span>
-<span class="nc" id="L205">              .append(j.getTurnaroundTimeMs()).append('\n');</span>
-<span class="nc" id="L206">        }</span>
-<span class="nc" id="L207">        return sb.toString();</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">        for (PrintJob j : allJobs) {</span>
+<span class="nc" id="L126">            sb.append(j.getJobId()).append(',')</span>
+<span class="nc" id="L127">              .append(j.getUserId()).append(',')</span>
+<span class="nc" id="L128">              .append(j.getPageCount()).append(',')</span>
+<span class="nc" id="L129">              .append(j.isColor()).append(',')</span>
+<span class="nc" id="L130">              .append(j.getPriority()).append(',')</span>
+<span class="nc" id="L131">              .append(j.getStatus().name()).append(',')</span>
+<span class="nc" id="L132">              .append(j.getSubmittedAt()).append(',')</span>
+<span class="nc" id="L133">              .append(j.getWaitingTimeMs()).append(',')</span>
+<span class="nc" id="L134">              .append(j.getTurnaroundTimeMs()).append('\n');</span>
+        }
+<span class="nc" id="L136">        return sb.toString();</span>
     }
 
     @Override
     public String toString() {
-<span class="nc" id="L212">        return String.format(&quot;Database{total=%d, completed=%d, failed=%d, cancelled=%d}&quot;,</span>
-<span class="nc" id="L213">            allJobs.size(), getCompletedJobs().size(),</span>
-<span class="nc" id="L214">            getFailedJobs().size(), getCancelledJobs().size());</span>
+<span class="nc" id="L141">        return String.format(&quot;Database{total=%d, completed=%d, failed=%d, cancelled=%d}&quot;,</span>
+<span class="nc" id="L142">            allJobs.size(), getCompletedJobs().size(),</span>
+<span class="nc" id="L143">            getFailedJobs().size(), getCancelledJobs().size());</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

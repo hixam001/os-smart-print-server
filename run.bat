@@ -11,8 +11,8 @@ if not exist "smart-print-server.jar" (
 
 echo.
 echo Starting OS Smart Print Server...
-echo Dashboard -^> http://localhost:3000
+echo Dashboard -^> http://localhost:8080
 echo Press Ctrl+C to stop.
 echo.
 
-java -jar smart-print-server.jar --server.port=3000
+java -jar smart-print-server.jar --server.port=8080

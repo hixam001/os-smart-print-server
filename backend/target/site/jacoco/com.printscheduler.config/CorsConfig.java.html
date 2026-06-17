@@ -5,24 +5,20 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/**
- * Global CORS configuration for all REST endpoints.
- * WebSocket CORS is handled separately in {@link com.printscheduler.websocket.WebSocketConfig}.
- */
 @Configuration
-<span class="nc" id="L13">public class CorsConfig implements WebMvcConfigurer {</span>
+<span class="nc" id="L9">public class CorsConfig implements WebMvcConfigurer {</span>
 
     @Value(&quot;${cors.allowed-origins:http://localhost:3000,http://localhost:5173}&quot;)
     private String[] allowedOrigins;
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-<span class="nc" id="L20">        registry.addMapping(&quot;/api/**&quot;)</span>
-<span class="nc" id="L21">            .allowedOrigins(allowedOrigins)</span>
-<span class="nc" id="L22">            .allowedMethods(&quot;GET&quot;, &quot;POST&quot;, &quot;PUT&quot;, &quot;DELETE&quot;, &quot;OPTIONS&quot;)</span>
-<span class="nc" id="L23">            .allowedHeaders(&quot;*&quot;)</span>
-<span class="nc" id="L24">            .allowCredentials(true)</span>
-<span class="nc" id="L25">            .maxAge(3600);</span>
-<span class="nc" id="L26">    }</span>
+<span class="nc" id="L16">        registry.addMapping(&quot;/api/**&quot;)</span>
+<span class="nc" id="L17">            .allowedOrigins(allowedOrigins)</span>
+<span class="nc" id="L18">            .allowedMethods(&quot;GET&quot;, &quot;POST&quot;, &quot;PUT&quot;, &quot;DELETE&quot;, &quot;OPTIONS&quot;)</span>
+<span class="nc" id="L19">            .allowedHeaders(&quot;*&quot;)</span>
+<span class="nc" id="L20">            .allowCredentials(true)</span>
+<span class="nc" id="L21">            .maxAge(3600);</span>
+<span class="nc" id="L22">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

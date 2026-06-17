@@ -2,11 +2,7 @@
 
 import jakarta.validation.constraints.*;
 
-/**
- * Request body for {@code PUT /api/simulation/configure}.
- * All fields are optional — only non-null values are applied.
- */
-<span class="nc" id="L9">public class ConfigUpdateRequest {</span>
+<span class="nc" id="L5">public class ConfigUpdateRequest {</span>
 
     @Pattern(regexp = &quot;FCFS|SJF|HYBRID&quot;,
              message = &quot;algorithm must be one of: FCFS, SJF, HYBRID&quot;)
@@ -20,14 +16,13 @@ import jakarta.validation.constraints.*;
     @DecimalMax(value = &quot;10.0&quot;, message = &quot;simulationSpeed must be between 0.1 and 10.0&quot;)
     private Double simulationSpeed;
 
-    // ── Getters / Setters ─────────────────────────────────────────────────
-<span class="nc" id="L24">    public String  getAlgorithm()            { return algorithm; }</span>
-<span class="nc" id="L25">    public void    setAlgorithm(String v)    { this.algorithm = v; }</span>
+<span class="nc" id="L19">    public String  getAlgorithm()            { return algorithm; }</span>
+<span class="nc" id="L20">    public void    setAlgorithm(String v)    { this.algorithm = v; }</span>
 
-<span class="nc" id="L27">    public Long    getJobIntervalMs()        { return jobIntervalMs; }</span>
-<span class="nc" id="L28">    public void    setJobIntervalMs(Long v)  { this.jobIntervalMs = v; }</span>
+<span class="nc" id="L22">    public Long    getJobIntervalMs()        { return jobIntervalMs; }</span>
+<span class="nc" id="L23">    public void    setJobIntervalMs(Long v)  { this.jobIntervalMs = v; }</span>
 
-<span class="nc" id="L30">    public Double  getSimulationSpeed()      { return simulationSpeed; }</span>
-<span class="nc" id="L31">    public void    setSimulationSpeed(Double v) { this.simulationSpeed = v; }</span>
+<span class="nc" id="L25">    public Double  getSimulationSpeed()      { return simulationSpeed; }</span>
+<span class="nc" id="L26">    public void    setSimulationSpeed(Double v) { this.simulationSpeed = v; }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

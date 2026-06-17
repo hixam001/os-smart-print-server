@@ -6,347 +6,233 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Bounded, algorithm-aware print queue.
- *
- * &lt;h3&gt;Supported scheduling algorithms&lt;/h3&gt;
- * &lt;ul&gt;
- *   &lt;li&gt;&lt;b&gt;FCFS&lt;/b&gt; – First-Come, First-Served: jobs are dispatched in
- *       the order they arrived (FIFO on {@code submittedAt}).&lt;/li&gt;
- *   &lt;li&gt;&lt;b&gt;SJF&lt;/b&gt; – Shortest Job First: the job with the fewest pages
- *       (× colour multiplier) is dispatched next.&lt;/li&gt;
- *   &lt;li&gt;&lt;b&gt;HYBRID&lt;/b&gt; – Combines SJF with a starvation-prevention boost:
- *       any job that has waited longer than {@code agingThresholdMs} has
- *       its effective priority raised so it cannot be starved indefinitely.&lt;/li&gt;
- * &lt;/ul&gt;
- *
- * &lt;h3&gt;Capacity&lt;/h3&gt;
- * The queue rejects new jobs when it is full; callers receive {@code false}
- * from {@link #enqueue(PrintJob)} and must handle the rejection.
- *
- * &lt;h3&gt;Thread-safety&lt;/h3&gt;
- * All public methods are guarded by an internal {@link ReentrantLock}.
- * The simulator may enqueue jobs from a user-thread while the printer
- * dispatcher dequeues from a scheduler thread.
- *
- * &lt;h3&gt;Metrics&lt;/h3&gt;
- * The queue tracks total jobs enqueued, dequeued, and rejected for
- * dashboard display.
- */
 public class PrintQueue {
 
-    // ── Constants ─────────────────────────────────────────────────────────
-
-    /** Default aging threshold for HYBRID mode (30 simulation-seconds). */
     public static final long DEFAULT_AGING_THRESHOLD_MS = 30_000L;
 
-    /**
-     * Milliseconds of estimated print time per monochrome page.
-     * 3 000 ms ≈ 20 pages/min — realistic for a mid-range laser printer.
-     * Colour jobs get a 1.5× multiplier applied in {@link PrintJob#estimatedDurationMs}.
-     */
     public static final long MS_PER_PAGE = 3_000L;
 
-    /**
-     * One-time job computation delay before printing starts.
-     * Simulates the printer receiving the job, processing fonts/graphics,
-     * and warming up the fuser — typically 2–5 s on a real device.
-     */
     public static final long MS_COMPUTE_DELAY = 2_500L;
 
-    // ── Configuration ─────────────────────────────────────────────────────
     private final int    capacity;
-    private       String algorithm;        // &quot;FCFS&quot; | &quot;SJF&quot; | &quot;HYBRID&quot;
-    private       long   agingThresholdMs; // HYBRID: starvation threshold
+    private       String algorithm;
+    private       long   agingThresholdMs;
 
-    // ── Internal state ────────────────────────────────────────────────────
-<span class="nc" id="L63">    private final List&lt;PrintJob&gt;  jobs = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L64">    private final ReentrantLock   lock = new ReentrantLock(true); // fair</span>
+<span class="nc" id="L21">    private final List&lt;PrintJob&gt;  jobs = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L22">    private final ReentrantLock   lock = new ReentrantLock(true);</span>
 
-    // ── Metrics ───────────────────────────────────────────────────────────
-<span class="nc" id="L67">    private volatile long totalEnqueued = 0;</span>
-<span class="nc" id="L68">    private volatile long totalDequeued = 0;</span>
-<span class="nc" id="L69">    private volatile long totalRejected = 0;</span>
+<span class="nc" id="L24">    private volatile long totalEnqueued = 0;</span>
+<span class="nc" id="L25">    private volatile long totalDequeued = 0;</span>
+<span class="nc" id="L26">    private volatile long totalRejected = 0;</span>
 
-    // ── Constructors ──────────────────────────────────────────────────────
-
-    /**
-     * Creates a queue with the given capacity and scheduling algorithm.
-     *
-     * @param capacity  maximum number of queued jobs (≥ 1)
-     * @param algorithm &quot;FCFS&quot;, &quot;SJF&quot;, or &quot;HYBRID&quot;
-     */
     public PrintQueue(int capacity, String algorithm) {
-<span class="nc" id="L80">        this(capacity, algorithm, DEFAULT_AGING_THRESHOLD_MS);</span>
-<span class="nc" id="L81">    }</span>
+<span class="nc" id="L29">        this(capacity, algorithm, DEFAULT_AGING_THRESHOLD_MS);</span>
+<span class="nc" id="L30">    }</span>
 
-    /**
-     * Full constructor allowing a custom aging threshold.
-     *
-     * @param capacity         maximum queued jobs
-     * @param algorithm        scheduling algorithm
-     * @param agingThresholdMs ms after which HYBRID boosts a waiting job
-     */
-<span class="nc" id="L90">    public PrintQueue(int capacity, String algorithm, long agingThresholdMs) {</span>
-<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (capacity &lt; 1) throw new IllegalArgumentException(&quot;capacity must be ≥ 1&quot;);</span>
-<span class="nc" id="L92">        this.capacity         = capacity;</span>
-<span class="nc" id="L93">        this.algorithm        = normalise(algorithm);</span>
-<span class="nc" id="L94">        this.agingThresholdMs = agingThresholdMs;</span>
-<span class="nc" id="L95">    }</span>
+<span class="nc" id="L32">    public PrintQueue(int capacity, String algorithm, long agingThresholdMs) {</span>
+<span class="nc bnc" id="L33" title="All 2 branches missed.">        if (capacity &lt; 1) throw new IllegalArgumentException(&quot;capacity must be ≥ 1&quot;);</span>
+<span class="nc" id="L34">        this.capacity         = capacity;</span>
+<span class="nc" id="L35">        this.algorithm        = normalise(algorithm);</span>
+<span class="nc" id="L36">        this.agingThresholdMs = agingThresholdMs;</span>
+<span class="nc" id="L37">    }</span>
 
-    // ── Queue operations ──────────────────────────────────────────────────
-
-    /**
-     * Attempts to add a job to the queue.
-     *
-     * @param job the job to enqueue (must not be {@code null})
-     * @return {@code true} if accepted; {@code false} if the queue is full
-     */
     public boolean enqueue(PrintJob job) {
-<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (job == null) throw new IllegalArgumentException(&quot;job must not be null&quot;);</span>
-<span class="nc" id="L107">        lock.lock();</span>
+<span class="nc bnc" id="L40" title="All 2 branches missed.">        if (job == null) throw new IllegalArgumentException(&quot;job must not be null&quot;);</span>
+<span class="nc" id="L41">        lock.lock();</span>
         try {
-<span class="nc bnc" id="L109" title="All 2 branches missed.">            if (jobs.size() &gt;= capacity) {</span>
-<span class="nc" id="L110">                totalRejected++;</span>
-<span class="nc" id="L111">                return false;</span>
+<span class="nc bnc" id="L43" title="All 2 branches missed.">            if (jobs.size() &gt;= capacity) {</span>
+<span class="nc" id="L44">                totalRejected++;</span>
+<span class="nc" id="L45">                return false;</span>
             }
-<span class="nc" id="L113">            jobs.add(job);</span>
-<span class="nc" id="L114">            totalEnqueued++;</span>
-<span class="nc" id="L115">            return true;</span>
+<span class="nc" id="L47">            jobs.add(job);</span>
+<span class="nc" id="L48">            totalEnqueued++;</span>
+<span class="nc" id="L49">            return true;</span>
         } finally {
-<span class="nc" id="L117">            lock.unlock();</span>
+<span class="nc" id="L51">            lock.unlock();</span>
         }
     }
 
-    /**
-     * Selects and removes the next job according to the current algorithm.
-     *
-     * @param nowMs current simulation time (used for HYBRID aging)
-     * @return the next {@link PrintJob}, or {@code null} if the queue is empty
-     */
     public PrintJob dequeue(long nowMs) {
-<span class="nc" id="L128">        lock.lock();</span>
+<span class="nc" id="L56">        lock.lock();</span>
         try {
-<span class="nc bnc" id="L130" title="All 2 branches missed.">            if (jobs.isEmpty()) return null;</span>
-<span class="nc" id="L131">            PrintJob chosen = selectNext(nowMs);</span>
-<span class="nc bnc" id="L132" title="All 2 branches missed.">            if (chosen != null) {</span>
-<span class="nc" id="L133">                jobs.remove(chosen);</span>
-<span class="nc" id="L134">                totalDequeued++;</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">            if (jobs.isEmpty()) return null;</span>
+<span class="nc" id="L59">            PrintJob chosen = selectNext(nowMs);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">            if (chosen != null) {</span>
+<span class="nc" id="L61">                jobs.remove(chosen);</span>
+<span class="nc" id="L62">                totalDequeued++;</span>
             }
-<span class="nc" id="L136">            return chosen;</span>
+<span class="nc" id="L64">            return chosen;</span>
         } finally {
-<span class="nc" id="L138">            lock.unlock();</span>
+<span class="nc" id="L66">            lock.unlock();</span>
         }
     }
 
-    /**
-     * Returns the next candidate job without removing it.
-     *
-     * @param nowMs current simulation time
-     * @return peek at the next job, or {@code null} if empty
-     */
     public PrintJob peek(long nowMs) {
-<span class="nc" id="L149">        lock.lock();</span>
+<span class="nc" id="L71">        lock.lock();</span>
         try {
-<span class="nc bnc" id="L151" title="All 2 branches missed.">            return jobs.isEmpty() ? null : selectNext(nowMs);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">            return jobs.isEmpty() ? null : selectNext(nowMs);</span>
         } finally {
-<span class="nc" id="L153">            lock.unlock();</span>
+<span class="nc" id="L75">            lock.unlock();</span>
         }
     }
 
-    /**
-     * Removes a specific job from the queue (for cancellation).
-     *
-     * @param jobId the job to cancel
-     * @param nowMs current simulation time
-     * @return {@code true} if the job was found and cancelled
-     */
     public boolean cancel(long jobId, long nowMs) {
-<span class="nc" id="L165">        lock.lock();</span>
+<span class="nc" id="L80">        lock.lock();</span>
         try {
-<span class="nc bnc" id="L167" title="All 2 branches missed.">            for (PrintJob j : jobs) {</span>
-<span class="nc bnc" id="L168" title="All 2 branches missed.">                if (j.getJobId() == jobId) {</span>
-<span class="nc" id="L169">                    jobs.remove(j);</span>
-<span class="nc" id="L170">                    j.markCancelled(nowMs);</span>
-<span class="nc" id="L171">                    return true;</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">            for (PrintJob j : jobs) {</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">                if (j.getJobId() == jobId) {</span>
+<span class="nc" id="L84">                    jobs.remove(j);</span>
+<span class="nc" id="L85">                    j.markCancelled(nowMs);</span>
+<span class="nc" id="L86">                    return true;</span>
                 }
-<span class="nc" id="L173">            }</span>
-<span class="nc" id="L174">            return false;</span>
+            }
+<span class="nc" id="L89">            return false;</span>
         } finally {
-<span class="nc" id="L176">            lock.unlock();</span>
+<span class="nc" id="L91">            lock.unlock();</span>
         }
     }
 
-    /** Drains all queued jobs and cancels each one. */
     public void clear(long nowMs) {
-<span class="nc" id="L182">        lock.lock();</span>
+<span class="nc" id="L96">        lock.lock();</span>
         try {
-<span class="nc bnc" id="L184" title="All 2 branches missed.">            for (PrintJob j : jobs) {</span>
-<span class="nc" id="L185">                j.markCancelled(nowMs);</span>
-<span class="nc" id="L186">            }</span>
-<span class="nc" id="L187">            jobs.clear();</span>
-        } finally {
-<span class="nc" id="L189">            lock.unlock();</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            for (PrintJob j : jobs) {</span>
+<span class="nc" id="L99">                j.markCancelled(nowMs);</span>
+            }
+<span class="nc" id="L101">            jobs.clear();</span>
+<span class="nc" id="L102">        } finally {</span>
+<span class="nc" id="L103">            lock.unlock();</span>
         }
-<span class="nc" id="L191">    }</span>
+<span class="nc" id="L105">    }</span>
 
-    // ── Algorithm selection ───────────────────────────────────────────────
-
-    /**
-     * Picks the best job according to the currently active algorithm.
-     * Caller must hold {@code lock}.
-     */
     private PrintJob selectNext(long nowMs) {
-<span class="nc bnc" id="L200" title="All 3 branches missed.">        return switch (algorithm) {</span>
-<span class="nc" id="L201">            case &quot;SJF&quot;    -&gt; selectSjf();</span>
-<span class="nc" id="L202">            case &quot;HYBRID&quot; -&gt; selectHybrid(nowMs);</span>
-<span class="nc" id="L203">            default       -&gt; selectFcfs();   // &quot;FCFS&quot;</span>
+<span class="nc bnc" id="L108" title="All 3 branches missed.">        return switch (algorithm) {</span>
+<span class="nc" id="L109">            case &quot;SJF&quot;    -&gt; selectSjf();</span>
+<span class="nc" id="L110">            case &quot;HYBRID&quot; -&gt; selectHybrid(nowMs);</span>
+<span class="nc" id="L111">            default       -&gt; selectFcfs();</span>
         };
     }
 
-    /** FCFS: earliest-submitted job first. */
     private PrintJob selectFcfs() {
-<span class="nc" id="L209">        return jobs.stream()</span>
-<span class="nc" id="L210">                   .min(Comparator.comparingLong(PrintJob::getSubmittedAt))</span>
-<span class="nc" id="L211">                   .orElse(null);</span>
+<span class="nc" id="L116">        return jobs.stream()</span>
+<span class="nc" id="L117">                   .min(Comparator.comparingLong(PrintJob::getSubmittedAt))</span>
+<span class="nc" id="L118">                   .orElse(null);</span>
     }
 
-    /** SJF: shortest (fewest estimated ms) job first. */
     private PrintJob selectSjf() {
-<span class="nc" id="L216">        return jobs.stream()</span>
-<span class="nc" id="L217">                   .min(Comparator.comparingLong(j -&gt; j.estimatedDurationMs(MS_PER_PAGE)))</span>
-<span class="nc" id="L218">                   .orElse(null);</span>
+<span class="nc" id="L122">        return jobs.stream()</span>
+<span class="nc" id="L123">                   .min(Comparator.comparingLong(j -&gt; j.estimatedDurationMs(MS_PER_PAGE)))</span>
+<span class="nc" id="L124">                   .orElse(null);</span>
     }
 
-    /**
-     * HYBRID: use SJF normally, but any job that has waited ≥
-     * {@code agingThresholdMs} is promoted above all non-aged SJF candidates.
-     * Among aged jobs, the one that waited longest wins (FCFS tie-break).
-     */
     private PrintJob selectHybrid(long nowMs) {
-        // Partition into aged and fresh buckets
-<span class="nc" id="L228">        PrintJob longestAged = null;</span>
-<span class="nc" id="L229">        long     maxWait     = -1;</span>
-<span class="nc" id="L230">        PrintJob sjfFresh    = null;</span>
-<span class="nc" id="L231">        long     minDuration = Long.MAX_VALUE;</span>
 
-<span class="nc bnc" id="L233" title="All 2 branches missed.">        for (PrintJob j : jobs) {</span>
-<span class="nc" id="L234">            long waited   = nowMs - j.getSubmittedAt();</span>
-<span class="nc" id="L235">            long duration = j.estimatedDurationMs(MS_PER_PAGE);</span>
+<span class="nc" id="L129">        PrintJob longestAged = null;</span>
+<span class="nc" id="L130">        long     maxWait     = -1;</span>
+<span class="nc" id="L131">        PrintJob sjfFresh    = null;</span>
+<span class="nc" id="L132">        long     minDuration = Long.MAX_VALUE;</span>
 
-<span class="nc bnc" id="L237" title="All 2 branches missed.">            if (waited &gt;= agingThresholdMs) {</span>
-                // Aged: prefer the one that waited longest
-<span class="nc bnc" id="L239" title="All 2 branches missed.">                if (waited &gt; maxWait) {</span>
-<span class="nc" id="L240">                    maxWait     = waited;</span>
-<span class="nc" id="L241">                    longestAged = j;</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">        for (PrintJob j : jobs) {</span>
+<span class="nc" id="L135">            long waited   = nowMs - j.getSubmittedAt();</span>
+<span class="nc" id="L136">            long duration = j.estimatedDurationMs(MS_PER_PAGE);</span>
+
+<span class="nc bnc" id="L138" title="All 2 branches missed.">            if (waited &gt;= agingThresholdMs) {</span>
+
+<span class="nc bnc" id="L140" title="All 2 branches missed.">                if (waited &gt; maxWait) {</span>
+<span class="nc" id="L141">                    maxWait     = waited;</span>
+<span class="nc" id="L142">                    longestAged = j;</span>
                 }
-            } else {
-                // Fresh: prefer shortest
-<span class="nc bnc" id="L245" title="All 2 branches missed.">                if (duration &lt; minDuration) {</span>
-<span class="nc" id="L246">                    minDuration = duration;</span>
-<span class="nc" id="L247">                    sjfFresh    = j;</span>
+<span class="nc" id="L144">            } else {</span>
+
+<span class="nc bnc" id="L146" title="All 2 branches missed.">                if (duration &lt; minDuration) {</span>
+<span class="nc" id="L147">                    minDuration = duration;</span>
+<span class="nc" id="L148">                    sjfFresh    = j;</span>
                 }
             }
-<span class="nc" id="L250">        }</span>
-        // Aged jobs always win; fall back to SJF among fresh
-<span class="nc bnc" id="L252" title="All 2 branches missed.">        return longestAged != null ? longestAged : sjfFresh;</span>
+        }
+
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        return longestAged != null ? longestAged : sjfFresh;</span>
     }
 
-    // ── Runtime configuration ─────────────────────────────────────────────
-
-    /** Switches the scheduling algorithm at runtime. */
     public void setAlgorithm(String algorithm) {
-<span class="nc" id="L259">        lock.lock();</span>
+<span class="nc" id="L157">        lock.lock();</span>
         try {
-<span class="nc" id="L261">            this.algorithm = normalise(algorithm);</span>
-        } finally {
-<span class="nc" id="L263">            lock.unlock();</span>
+<span class="nc" id="L159">            this.algorithm = normalise(algorithm);</span>
+<span class="nc" id="L160">        } finally {</span>
+<span class="nc" id="L161">            lock.unlock();</span>
         }
-<span class="nc" id="L265">    }</span>
+<span class="nc" id="L163">    }</span>
 
-    /** Updates the aging threshold used by the HYBRID algorithm. */
     public void setAgingThresholdMs(long agingThresholdMs) {
-<span class="nc" id="L269">        this.agingThresholdMs = agingThresholdMs;</span>
-<span class="nc" id="L270">    }</span>
+<span class="nc" id="L166">        this.agingThresholdMs = agingThresholdMs;</span>
+<span class="nc" id="L167">    }</span>
 
-    // ── Query helpers ─────────────────────────────────────────────────────
-
-    /** Returns an unmodifiable snapshot of all queued jobs (for display only). */
     public List&lt;PrintJob&gt; getQueuedJobsSnapshot() {
-<span class="nc" id="L276">        lock.lock();</span>
+<span class="nc" id="L170">        lock.lock();</span>
         try {
-<span class="nc" id="L278">            return Collections.unmodifiableList(new ArrayList&lt;&gt;(jobs));</span>
+<span class="nc" id="L172">            return Collections.unmodifiableList(new ArrayList&lt;&gt;(jobs));</span>
         } finally {
-<span class="nc" id="L280">            lock.unlock();</span>
+<span class="nc" id="L174">            lock.unlock();</span>
         }
     }
 
-    /** Current number of jobs in the queue. */
     public int size() {
-<span class="nc" id="L286">        lock.lock();</span>
+<span class="nc" id="L179">        lock.lock();</span>
         try {
-<span class="nc" id="L288">            return jobs.size();</span>
+<span class="nc" id="L181">            return jobs.size();</span>
         } finally {
-<span class="nc" id="L290">            lock.unlock();</span>
+<span class="nc" id="L183">            lock.unlock();</span>
         }
     }
 
-    /** Returns {@code true} if the queue is empty. */
     public boolean isEmpty() {
-<span class="nc" id="L296">        lock.lock();</span>
+<span class="nc" id="L188">        lock.lock();</span>
         try {
-<span class="nc" id="L298">            return jobs.isEmpty();</span>
+<span class="nc" id="L190">            return jobs.isEmpty();</span>
         } finally {
-<span class="nc" id="L300">            lock.unlock();</span>
+<span class="nc" id="L192">            lock.unlock();</span>
         }
     }
 
-    /** Returns {@code true} if the queue has no free slot. */
     public boolean isFull() {
-<span class="nc" id="L306">        lock.lock();</span>
+<span class="nc" id="L197">        lock.lock();</span>
         try {
-<span class="nc bnc" id="L308" title="All 2 branches missed.">            return jobs.size() &gt;= capacity;</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">            return jobs.size() &gt;= capacity;</span>
         } finally {
-<span class="nc" id="L310">            lock.unlock();</span>
+<span class="nc" id="L201">            lock.unlock();</span>
         }
     }
 
-    // ── Getters ───────────────────────────────────────────────────────────
+<span class="nc" id="L205">    public int    getCapacity()         { return capacity; }</span>
+<span class="nc" id="L206">    public String getAlgorithm()        { return algorithm; }</span>
+<span class="nc" id="L207">    public long   getAgingThresholdMs() { return agingThresholdMs; }</span>
+<span class="nc" id="L208">    public long   getTotalEnqueued()    { return totalEnqueued; }</span>
+<span class="nc" id="L209">    public long   getTotalDequeued()    { return totalDequeued; }</span>
+<span class="nc" id="L210">    public long   getTotalRejected()    { return totalRejected; }</span>
 
-<span class="nc" id="L316">    public int    getCapacity()         { return capacity; }</span>
-<span class="nc" id="L317">    public String getAlgorithm()        { return algorithm; }</span>
-<span class="nc" id="L318">    public long   getAgingThresholdMs() { return agingThresholdMs; }</span>
-<span class="nc" id="L319">    public long   getTotalEnqueued()    { return totalEnqueued; }</span>
-<span class="nc" id="L320">    public long   getTotalDequeued()    { return totalDequeued; }</span>
-<span class="nc" id="L321">    public long   getTotalRejected()    { return totalRejected; }</span>
-
-    /** Resets all metrics (call during simulation reset). */
     public void resetMetrics() {
-<span class="nc" id="L325">        lock.lock();</span>
+<span class="nc" id="L213">        lock.lock();</span>
         try {
-<span class="nc" id="L327">            totalEnqueued = 0;</span>
-<span class="nc" id="L328">            totalDequeued = 0;</span>
-<span class="nc" id="L329">            totalRejected = 0;</span>
-        } finally {
-<span class="nc" id="L331">            lock.unlock();</span>
+<span class="nc" id="L215">            totalEnqueued = 0;</span>
+<span class="nc" id="L216">            totalDequeued = 0;</span>
+<span class="nc" id="L217">            totalRejected = 0;</span>
+<span class="nc" id="L218">        } finally {</span>
+<span class="nc" id="L219">            lock.unlock();</span>
         }
-<span class="nc" id="L333">    }</span>
-
-    // ── Helpers ───────────────────────────────────────────────────────────
+<span class="nc" id="L221">    }</span>
 
     private static String normalise(String algo) {
-<span class="nc bnc" id="L338" title="All 2 branches missed.">        if (algo == null) return &quot;FCFS&quot;;</span>
-<span class="nc bnc" id="L339" title="All 3 branches missed.">        return switch (algo.toUpperCase()) {</span>
-<span class="nc" id="L340">            case &quot;SJF&quot;    -&gt; &quot;SJF&quot;;</span>
-<span class="nc" id="L341">            case &quot;HYBRID&quot; -&gt; &quot;HYBRID&quot;;</span>
-<span class="nc" id="L342">            default       -&gt; &quot;FCFS&quot;;</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">        if (algo == null) return &quot;FCFS&quot;;</span>
+<span class="nc bnc" id="L225" title="All 3 branches missed.">        return switch (algo.toUpperCase()) {</span>
+<span class="nc" id="L226">            case &quot;SJF&quot;    -&gt; &quot;SJF&quot;;</span>
+<span class="nc" id="L227">            case &quot;HYBRID&quot; -&gt; &quot;HYBRID&quot;;</span>
+<span class="nc" id="L228">            default       -&gt; &quot;FCFS&quot;;</span>
         };
     }
 
     @Override
     public String toString() {
-<span class="nc" id="L348">        return String.format(&quot;PrintQueue{algo=%s, size=%d/%d, enqueued=%d, dequeued=%d, rejected=%d}&quot;,</span>
-<span class="nc" id="L349">            algorithm, jobs.size(), capacity, totalEnqueued, totalDequeued, totalRejected);</span>
+<span class="nc" id="L234">        return String.format(&quot;PrintQueue{algo=%s, size=%d/%d, enqueued=%d, dequeued=%d, rejected=%d}&quot;,</span>
+<span class="nc" id="L235">            algorithm, jobs.size(), capacity, totalEnqueued, totalDequeued, totalRejected);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

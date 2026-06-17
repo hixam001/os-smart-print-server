@@ -6,24 +6,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
-/**
- * Exposes a shared, configured {@link ObjectMapper} bean.
- *
- * &lt;p&gt;Explicitly declared so WebSocket components can inject it via constructor
- * injection regardless of auto-config ordering.
- *
- * &lt;p&gt;Compatible with Spring Boot 4 / Jackson 3.
- */
 @Configuration
-<span class="nc" id="L18">public class JacksonConfig {</span>
+<span class="nc" id="L10">public class JacksonConfig {</span>
 
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
-<span class="nc" id="L23">        ObjectMapper mapper = new ObjectMapper();</span>
-<span class="nc" id="L24">        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);</span>
-        // Jackson 3 auto-registers Java Time module by default; no explicit register needed.
-<span class="nc" id="L26">        return mapper;</span>
+<span class="nc" id="L15">        ObjectMapper mapper = new ObjectMapper();</span>
+<span class="nc" id="L16">        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);</span>
+
+<span class="nc" id="L18">        return mapper;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

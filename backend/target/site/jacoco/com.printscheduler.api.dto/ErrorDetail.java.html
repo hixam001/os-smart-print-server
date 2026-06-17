@@ -2,35 +2,24 @@
 
 import java.util.Map;
 
-/**
- * Structured error payload included in every failed API response.
- *
- * &lt;pre&gt;
- * {
- *   &quot;code&quot;: &quot;SIMULATION_ALREADY_RUNNING&quot;,
- *   &quot;message&quot;: &quot;Cannot start: simulation is already running&quot;,
- *   &quot;details&quot;: { }
- * }
- * &lt;/pre&gt;
- */
 public class ErrorDetail {
 
     private final String              code;
     private final String              message;
     private final Map&lt;String, Object&gt; details;
 
-<span class="nc" id="L22">    public ErrorDetail(String code, String message, Map&lt;String, Object&gt; details) {</span>
-<span class="nc" id="L23">        this.code    = code;</span>
-<span class="nc" id="L24">        this.message = message;</span>
-<span class="nc bnc" id="L25" title="All 2 branches missed.">        this.details = details == null ? Map.of() : details;</span>
-<span class="nc" id="L26">    }</span>
+<span class="nc" id="L11">    public ErrorDetail(String code, String message, Map&lt;String, Object&gt; details) {</span>
+<span class="nc" id="L12">        this.code    = code;</span>
+<span class="nc" id="L13">        this.message = message;</span>
+<span class="nc bnc" id="L14" title="All 2 branches missed.">        this.details = details == null ? Map.of() : details;</span>
+<span class="nc" id="L15">    }</span>
 
     public ErrorDetail(String code, String message) {
-<span class="nc" id="L29">        this(code, message, Map.of());</span>
-<span class="nc" id="L30">    }</span>
+<span class="nc" id="L18">        this(code, message, Map.of());</span>
+<span class="nc" id="L19">    }</span>
 
-<span class="nc" id="L32">    public String              getCode()    { return code; }</span>
-<span class="nc" id="L33">    public String              getMessage() { return message; }</span>
-<span class="nc" id="L34">    public Map&lt;String, Object&gt; getDetails() { return details; }</span>
+<span class="nc" id="L21">    public String              getCode()    { return code; }</span>
+<span class="nc" id="L22">    public String              getMessage() { return message; }</span>
+<span class="nc" id="L23">    public Map&lt;String, Object&gt; getDetails() { return details; }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

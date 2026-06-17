@@ -2,70 +2,64 @@
 
 import jakarta.validation.constraints.*;
 
-/**
- * Configuration supplied by the client when starting or re-configuring a simulation.
- * All fields are validated before reaching the simulator.
- */
 public class SimulationConfig {
 
-<span class="nc" id="L11">    @Min(value = 1, message = &quot;numUsers must be between 1 and 20&quot;)</span>
+    @Min(value = 1, message = &quot;numUsers must be between 1 and 20&quot;)
     @Max(value = 20, message = &quot;numUsers must be between 1 and 20&quot;)
-    private int numUsers = 3;
+<span class="nc" id="L9">    private int numUsers = 3;</span>
 
-<span class="nc" id="L15">    @Min(value = 1, message = &quot;numPrinters must be between 1 and 20&quot;)</span>
+    @Min(value = 1, message = &quot;numPrinters must be between 1 and 20&quot;)
     @Max(value = 20, message = &quot;numPrinters must be between 1 and 20&quot;)
-    private int numPrinters = 2;
+<span class="nc" id="L13">    private int numPrinters = 2;</span>
 
-<span class="nc" id="L19">    @Min(value = 5, message = &quot;queueCapacity must be between 5 and 100&quot;)</span>
+    @Min(value = 5, message = &quot;queueCapacity must be between 5 and 100&quot;)
     @Max(value = 100, message = &quot;queueCapacity must be between 5 and 100&quot;)
-    private int queueCapacity = 10;
+<span class="nc" id="L17">    private int queueCapacity = 10;</span>
 
-<span class="nc" id="L23">    @Min(value = 100, message = &quot;jobIntervalMs must be between 100 and 10000&quot;)</span>
+    @Min(value = 100, message = &quot;jobIntervalMs must be between 100 and 10000&quot;)
     @Max(value = 10000, message = &quot;jobIntervalMs must be between 100 and 10000&quot;)
-    private long jobIntervalMs = 5000;   // users submit a job every ~5s
+<span class="nc" id="L21">    private long jobIntervalMs = 5000;</span>
 
-<span class="nc" id="L27">    @Pattern(regexp = &quot;FCFS|SJF|HYBRID&quot;,</span>
+    @Pattern(regexp = &quot;FCFS|SJF|HYBRID&quot;,
              message = &quot;algorithm must be one of: FCFS, SJF, HYBRID&quot;)
-    private String algorithm = &quot;HYBRID&quot;;
+<span class="nc" id="L25">    private String algorithm = &quot;HYBRID&quot;;</span>
 
-<span class="nc" id="L31">    @DecimalMin(value = &quot;0.0&quot;, message = &quot;colorJobRatio must be between 0.0 and 1.0&quot;)</span>
+    @DecimalMin(value = &quot;0.0&quot;, message = &quot;colorJobRatio must be between 0.0 and 1.0&quot;)
     @DecimalMax(value = &quot;1.0&quot;, message = &quot;colorJobRatio must be between 0.0 and 1.0&quot;)
-    private double colorJobRatio = 0.5;
+<span class="nc" id="L29">    private double colorJobRatio = 0.5;</span>
 
-<span class="nc" id="L35">    @DecimalMin(value = &quot;0.0&quot;, message = &quot;smallJobPercentage must be between 0.0 and 1.0&quot;)</span>
+    @DecimalMin(value = &quot;0.0&quot;, message = &quot;smallJobPercentage must be between 0.0 and 1.0&quot;)
     @DecimalMax(value = &quot;1.0&quot;, message = &quot;smallJobPercentage must be between 0.0 and 1.0&quot;)
-    private double smallJobPercentage = 0.3;
+<span class="nc" id="L33">    private double smallJobPercentage = 0.3;</span>
 
-<span class="nc" id="L39">    @DecimalMin(value = &quot;0.1&quot;, message = &quot;simulationSpeed must be between 0.1 and 10.0&quot;)</span>
+    @DecimalMin(value = &quot;0.1&quot;, message = &quot;simulationSpeed must be between 0.1 and 10.0&quot;)
     @DecimalMax(value = &quot;10.0&quot;, message = &quot;simulationSpeed must be between 0.1 and 10.0&quot;)
-    private double simulationSpeed = 2.0; // 2× makes print delays watchable
+<span class="nc" id="L37">    private double simulationSpeed = 2.0;</span>
 
-    // ── Constructors ──────────────────────────────────────────────────────
-<span class="nc" id="L44">    public SimulationConfig() {}</span>
+<span class="nc" id="L39">    public SimulationConfig() {}</span>
 
-    // ── Getters / Setters ─────────────────────────────────────────────────
-<span class="nc" id="L47">    public int    getNumUsers()           { return numUsers; }</span>
-<span class="nc" id="L48">    public void   setNumUsers(int v)      { this.numUsers = v; }</span>
+<span class="nc" id="L41">    public int    getNumUsers()           { return numUsers; }</span>
+<span class="nc" id="L42">    public void   setNumUsers(int v)      { this.numUsers = v; }</span>
 
-<span class="nc" id="L50">    public int    getNumPrinters()        { return numPrinters; }</span>
-<span class="nc" id="L51">    public void   setNumPrinters(int v)   { this.numPrinters = v; }</span>
+<span class="nc" id="L44">    public int    getNumPrinters()        { return numPrinters; }</span>
+<span class="nc" id="L45">    public void   setNumPrinters(int v)   { this.numPrinters = v; }</span>
 
-<span class="nc" id="L53">    public int    getQueueCapacity()      { return queueCapacity; }</span>
-<span class="nc" id="L54">    public void   setQueueCapacity(int v) { this.queueCapacity = v; }</span>
+<span class="nc" id="L47">    public int    getQueueCapacity()      { return queueCapacity; }</span>
+<span class="nc" id="L48">    public void   setQueueCapacity(int v) { this.queueCapacity = v; }</span>
 
-<span class="nc" id="L56">    public long   getJobIntervalMs()      { return jobIntervalMs; }</span>
-<span class="nc" id="L57">    public void   setJobIntervalMs(long v){ this.jobIntervalMs = v; }</span>
+<span class="nc" id="L50">    public long   getJobIntervalMs()      { return jobIntervalMs; }</span>
+<span class="nc" id="L51">    public void   setJobIntervalMs(long v){ this.jobIntervalMs = v; }</span>
 
-<span class="nc" id="L59">    public String getAlgorithm()          { return algorithm; }</span>
-<span class="nc" id="L60">    public void   setAlgorithm(String v)  { this.algorithm = v; }</span>
+<span class="nc" id="L53">    public String getAlgorithm()          { return algorithm; }</span>
+<span class="nc" id="L54">    public void   setAlgorithm(String v)  { this.algorithm = v; }</span>
 
-<span class="nc" id="L62">    public double getColorJobRatio()      { return colorJobRatio; }</span>
-<span class="nc" id="L63">    public void   setColorJobRatio(double v) { this.colorJobRatio = v; }</span>
+<span class="nc" id="L56">    public double getColorJobRatio()      { return colorJobRatio; }</span>
+<span class="nc" id="L57">    public void   setColorJobRatio(double v) { this.colorJobRatio = v; }</span>
 
-<span class="nc" id="L65">    public double getSmallJobPercentage() { return smallJobPercentage; }</span>
-<span class="nc" id="L66">    public void   setSmallJobPercentage(double v) { this.smallJobPercentage = v; }</span>
+<span class="nc" id="L59">    public double getSmallJobPercentage() { return smallJobPercentage; }</span>
+<span class="nc" id="L60">    public void   setSmallJobPercentage(double v) { this.smallJobPercentage = v; }</span>
 
-<span class="nc" id="L68">    public double getSimulationSpeed()    { return simulationSpeed; }</span>
-<span class="nc" id="L69">    public void   setSimulationSpeed(double v) { this.simulationSpeed = v; }</span>
+<span class="nc" id="L62">    public double getSimulationSpeed()    { return simulationSpeed; }</span>
+<span class="nc" id="L63">    public void   setSimulationSpeed(double v) { this.simulationSpeed = v; }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
